@@ -24,7 +24,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         # main window title
-        self.setWindowTitle("Human-in-the-Loop Annotation")
+        self.setWindowTitle("Shack - Hartmann")
 
         # view_box holds images and ROIs
         self.view_box = ViewBox(lockAspect=True, invertY=True)
@@ -45,6 +45,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # prev/next buttons
         self.button_prev.clicked.connect(self.prev)
         self.button_next.clicked.connect(self.next)
+
+        # remember last position
+        self.last_folder = os.getcwd()
 
     def prev(self):
         # update image and annotation data
@@ -80,14 +83,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def load(self) -> Path:
         # get directory for loading content from a folder
-        fname = QFileDialog.getExistingDirectory(self, 'Select Folder')
-        return Path(fname)
+        fname = QFileDialog.getExistingDirectory(self, 'Select Folder', str(self.last_folder))
+        fname = Path(fname)
+        self.last_folder = fname
+        return fname
 
     def save(self) -> Path:
         # directory and filename for saving annotation data in json format
-        cwd = os.getcwd()
-        fname = QFileDialog.getSaveFileName(self, "Save file", cwd, "Matlab files (*.mat)")
-        return Path(fname[0])
+        fname = QFileDialog.getSaveFileName(self, "Save file", str(self.last_folder), "Matlab files (*.mat)")
+        fname = Path(fname[0])
+        self.last_folder = os.path.dirname(fname)
+        return fname 
 
     def load_images(self) -> None:
         # get file directory
@@ -101,8 +107,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.set_hist()
     
     def load_annot(self) -> None:
-        cwd = os.getcwd()
-        fname = QFileDialog.getOpenFileName(self, "Open file", cwd, "Matlab files (*.mat)")
+        fname = QFileDialog.getOpenFileName(self, "Open file", str(self.last_folder), "Matlab files (*.mat)")
         fname = Path(fname[0])
         data = sio.loadmat(fname)
 
