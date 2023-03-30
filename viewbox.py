@@ -201,7 +201,7 @@ class ViewBox(pg.ViewBox):
 
     def calc_centroids(self):
         # progress bar
-        pb = QProgressDialog("Calculating ROIs", "Cancel", 0, self.length)
+        pb = QProgressDialog("Calculating Centroids ...", "Cancel", 0, self.length)
         pb.setWindowModality(Qt.WindowModal)
 
         self.centroids = np.zeros((self.length, len(self.rois), 2)) 
