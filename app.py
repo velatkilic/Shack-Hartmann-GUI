@@ -84,6 +84,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def load(self) -> Path:
         # get directory for loading content from a folder
         fname = QFileDialog.getExistingDirectory(self, 'Select Folder', str(self.last_folder))
+        if len(fname) == 0:
+            return None
         fname = Path(fname)
         self.last_folder = fname
         return fname
@@ -91,6 +93,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save(self) -> Path:
         # directory and filename for saving annotation data in json format
         fname = QFileDialog.getSaveFileName(self, "Save file", str(self.last_folder), "Matlab files (*.mat)")
+        if len(fname[0]) == 0: return None
         fname = Path(fname[0])
         self.last_folder = os.path.dirname(fname)
         return fname 
@@ -108,6 +111,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def load_annot(self) -> None:
         fname = QFileDialog.getOpenFileName(self, "Open file", str(self.last_folder), "Matlab files (*.mat)")
+        if len(fname[0]) == 0:
+            return None
+        
         fname = Path(fname[0])
         data = sio.loadmat(fname)
 
@@ -130,6 +136,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save_annot(self) -> None:
         # ask user for filename
         fname = self.save()
+        if fname is None:
+            return None
 
         # gather data
         blob_log_params, box_size = self.get_params()
