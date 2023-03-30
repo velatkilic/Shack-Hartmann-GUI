@@ -42,4 +42,4 @@ def bbox_to_centroid(img, roi):
 
     crop = img[row0:row1,col0:col1]
     drow, dcol = centroid2D(crop)
-    return [drow, dcol] 
+    return [drow+row0, dcol+col0] 
