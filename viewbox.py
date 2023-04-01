@@ -1,6 +1,7 @@
 from pathlib import Path
 from skimage.feature import blob_log
 import numpy as np
+from scipy.interpolate import griddata
 
 from dataset import TiffFolder
 
@@ -36,7 +37,9 @@ class ViewBox(pg.ViewBox):
 
         # centroid data
         self.centroids = None
-    
+        self.reference_idx = None
+        self.surface_reconstructions = None
+
     def load_images(self, fname: Path) -> None:
         self.init_vars()
         self.tiff_folder = TiffFolder(fname)
@@ -198,6 +201,7 @@ class ViewBox(pg.ViewBox):
             pb.setValue(i)
 
         self.rois = rois
+        self.reference_idx = self.idx # record reference frame
 
     def calc_centroids(self):
         # progress bar
@@ -214,3 +218,50 @@ class ViewBox(pg.ViewBox):
             if pb.wasCanceled():
                 break
             pb.setValue(i)
+    
+    def surf_rec(self):
+        if self.reference_idx is None:
+            raise NotImplementedError("Reference index must be set with blob detection")
+        
+        # calculate shifts with respect to the reference frame
+        center = self.centroids[self.reference_idx, :, :]
+        shifts = self.centroids - center
+        
+        xmin = center[:,0].astype(np.intc).min()
+        xmax = center[:,0].astype(np.intc).max()
+        ymin = center[:,1].astype(np.intc).min()
+        ymax = center[:,1].astype(np.intc).max()
+
+        xq, yq = np.mgrid[xmin:xmax, ymin:ymax]
+
+        self.surface_reconstructions = np.zeros((len(self.centroids), xmax-xmin, ymax-ymin))
+        for i in range(len(shifts)):
+            gx = griddata(center, self.centroids[i, :, 0], (xq,yq), method='linear')
+            gy = griddata(center, self.centroids[i, :, 1], (xq,yq), method='linear')
+
+            self.surface_reconstructions[i,:,:] = self.frankot_chellappa(gx, gy)
+
+    def frankot_chellappa(self, gx, gy):
+        # Frankot-Chellappa algorithm
+        if gx.shape != gy.shape:
+            raise ValueError("Gradient shapes must match")
+
+        gx, gy = map(np.nan_to_num, (gx, gy))
+
+        rows, cols = gx.shape
+        x = np.linspace(-np.pi/2, np.pi/2, rows)
+        y = np.linspace(-np.pi/2, np.pi/2, cols)
+        wx, wy = np.meshgrid(x, y, indexing="ij")
+        wx, wy = map(np.fft.ifftshift, (wx, wy))
+        d = wx**2 + wy**2
+
+        GX = np.fft.fft2(gx)
+        GY = np.fft.fft2(gy)
+        Z  = (-1j*wx*GX - 1j*wy*GY) / (d + 1e-15) # 1e-15 to avoid dvision by zero
+
+        z = np.fft.ifft2(Z)
+        z = z.real
+        z = z - z.min() 
+
+        return z
+

@@ -265,6 +265,17 @@
        </layout>
       </item>
       <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QPushButton" name="button_surf_rec">
+          <property name="text">
+           <string>Surface Reconstruction</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <property name="sizeConstraint">
          <enum>QLayout::SetFixedSize</enum>

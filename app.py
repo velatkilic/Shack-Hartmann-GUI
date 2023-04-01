@@ -41,6 +41,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # blob detection
         self.button_calc_roi.clicked.connect(self.run_blob)
         self.button_calc_centroids.clicked.connect(self.calc_centroids)
+        self.button_surf_rec.clicked.connect(self.surf_rec)
 
         # prev/next buttons
         self.button_prev.clicked.connect(self.prev)
@@ -143,10 +144,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         blob_log_params, box_size = self.get_params()
         params = blob_log_params | {"box_size": box_size}
         centroids = self.view_box.centroids
+        surfaces = self.view_box.surface_reconstructions
         rois = self.view_box.convert_rois_to_numpy()
 
         # save data
-        sio.savemat(fname, {"centroids":centroids, "rois":rois, "params":params})
+        sio.savemat(fname, {"centroids":centroids, "rois":rois, "params":params, "surfaces":surfaces})
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Left:
@@ -176,7 +178,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.view_box.rois is None:
             self.run_blob()
 
-        self.view_box.calc_centroids()        
+        self.view_box.calc_centroids()
+
+    def surf_rec(self):
+        if self.view_box.centroids is None:
+            self.calc_centroids()
+
+        self.view_box.surf_rec()
 
 
 if __name__ == "__main__":
