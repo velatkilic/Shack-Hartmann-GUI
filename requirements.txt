@@ -4,3 +4,4 @@ imageio-ffmpeg>=0.4.8
 pyqt5>=5.15.9
 pyqtgraph>=0.13.2
 opencv-python>=4.7.0
+matplotlib>=3.7.1

@@ -227,6 +227,9 @@ class ViewBox(pg.ViewBox):
         center = self.centroids[self.reference_idx, :, :]
         shifts = self.centroids - center
         
+        dx = abs(center[0,0] - center[1,0])
+        dy = abs(center[0,1] - center[1,1])
+
         xmin = center[:,0].astype(np.intc).min()
         xmax = center[:,0].astype(np.intc).max()
         ymin = center[:,1].astype(np.intc).min()
@@ -239,29 +242,5 @@ class ViewBox(pg.ViewBox):
             gx = griddata(center, self.centroids[i, :, 0], (xq,yq), method='linear')
             gy = griddata(center, self.centroids[i, :, 1], (xq,yq), method='linear')
 
-            self.surface_reconstructions[i,:,:] = self.frankot_chellappa(gx, gy)
-
-    def frankot_chellappa(self, gx, gy):
-        # Frankot-Chellappa algorithm
-        if gx.shape != gy.shape:
-            raise ValueError("Gradient shapes must match")
-
-        gx, gy = map(np.nan_to_num, (gx, gy))
-
-        rows, cols = gx.shape
-        x = np.linspace(-np.pi/2, np.pi/2, rows)
-        y = np.linspace(-np.pi/2, np.pi/2, cols)
-        wx, wy = np.meshgrid(x, y, indexing="ij")
-        wx, wy = map(np.fft.ifftshift, (wx, wy))
-        d = wx**2 + wy**2
-
-        GX = np.fft.fft2(gx)
-        GY = np.fft.fft2(gy)
-        Z  = (-1j*wx*GX - 1j*wy*GY) / (d + 1e-15) # 1e-15 to avoid dvision by zero
-
-        z = np.fft.ifft2(Z)
-        z = z.real
-        z = z - z.min() 
-
-        return z
+            self.surface_reconstructions[i,:,:] = self.frankot_chellappa(gx, gy, dx, dy)
 

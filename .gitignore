@@ -1,3 +1,5 @@
 087_*
 __pycache__
 *.mat
+data/
+figures/
