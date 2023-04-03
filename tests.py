@@ -4,7 +4,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from surface_reconstruction import frankot_chellappa, poisson_solver_neumann
+from surface_reconstruction import frankot_chellappa, poisson_solver_neumann, der_y, der_x
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -17,8 +17,8 @@ def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     z = 0.5*np.cos(2*np.pi*(fx*xx + fy*yy))
     z = z - z.min()
 
-    gx = (z[1:,1:] - z[0:-1,1:]) / dx
-    gy = (z[1:,1:] - z[1:,0:-1]) / dy
+    gx = der_x(z, dx)
+    gy = der_y(z, dy) 
 
     return z, gx, gy, dx, dy
 

@@ -1,6 +1,32 @@
 import numpy as np
 from scipy.fftpack import dct, idct
 
+def dct2(x):
+    return dct( dct( x, axis=0, norm='ortho' ), axis=1, norm='ortho' )
+
+def idct2(x):
+    return idct( idct( x, axis=0 , norm='ortho'), axis=1 , norm='ortho')
+
+def der_x(z, dx):
+    dzdx = (z[1:,1:] - z[0:-1,1:]) / dx
+    return dzdx
+
+def der_y(z, dy):
+    dzdy = (z[1:,1:] - z[1:,0:-1]) / dy
+    return dzdy
+
+def calc_laplacian(gx, gy, dx, dy):
+    # zero pad
+    gx = np.pad(gx, pad_width=1)
+    gy = np.pad(gy, pad_width=1)
+
+    # divergence of gradients
+    rho_x = der_x(gx, dx) 
+    rho_y = der_y(gy, dy)  
+    rho = rho_x + rho_y
+
+    return rho[:-1,:-1]
+
 def frankot_chellappa(gx, gy, dx=None, dy=None):
     # Frankot-Chellappa algorithm
     if gx.shape != gy.shape:
@@ -30,24 +56,6 @@ def frankot_chellappa(gx, gy, dx=None, dy=None):
 
     return z
 
-def dct2(a):
-    return dct( dct( a, axis=0, norm='ortho' ), axis=1, norm='ortho' )
-
-def idct2(a):
-    return idct( idct( a, axis=0 , norm='ortho'), axis=1 , norm='ortho')
-
-def calc_laplacian(gx, gy, dx, dy):
-    # zero pad
-    gx = np.pad(gx, pad_width=1)
-    gy = np.pad(gy, pad_width=1)
-
-    # divergence of gradients
-    rho_x = (gx[1:,1:] - gx[0:-1,1:]) / dx
-    rho_y = (gy[1:,1:] - gy[1:,0:-1]) / dy
-    
-    # divergence
-    rho = rho_x + rho_y
-    return rho[:-1,:-1]
 
 def poisson_solver_neumann(gx, gy, dx=None, dy=None):
     # see: Agrawal et al., "What is the range of surface reconstructions from a gradient field?" and
