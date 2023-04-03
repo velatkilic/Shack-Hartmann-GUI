@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.fftpack import dct, idct
 
 def frankot_chellappa(gx, gy, dx=None, dy=None):
     # Frankot-Chellappa algorithm
@@ -28,3 +29,49 @@ def frankot_chellappa(gx, gy, dx=None, dy=None):
     z = z - z.min() 
 
     return z
+
+def dct2(a):
+    return dct( dct( a, axis=0, norm='ortho' ), axis=1, norm='ortho' )
+
+def idct2(a):
+    return idct( idct( a, axis=0 , norm='ortho'), axis=1 , norm='ortho')
+
+def calc_laplacian(gx, gy, dx, dy):
+    # zero pad
+    gx = np.pad(gx, pad_width=1)
+    gy = np.pad(gy, pad_width=1)
+
+    # divergence of gradients
+    rho_x = (gx[1:,1:] - gx[0:-1,1:]) / dx
+    rho_y = (gy[1:,1:] - gy[1:,0:-1]) / dy
+    
+    # divergence
+    rho = rho_x + rho_y
+    return rho[:-1,:-1]
+
+def poisson_solver_neumann(gx, gy, dx=None, dy=None):
+    # see: Agrawal et al., "What is the range of surface reconstructions from a gradient field?" and
+    # https://elonen.iki.fi/code/misc-notes/neumann-cosine/
+    
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    if dx is None: dx = 1.
+    if dy is None: dy = 1.
+    # fill nan with zeros
+    gx, gy = map(np.nan_to_num, (gx, gy))
+
+    rows, cols = gx.shape
+
+    # calculate laplacian from gradients (apply divergence)
+    rho = calc_laplacian(gx, gy, dx, dy)
+    RHO = dct2(rho)
+
+    x, y = np.mgrid[0:rows, 0:cols]
+    d = 2.*(np.cos(np.pi*x/rows) + np.cos(np.pi*y/cols) - 2)
+    RHO[1:,1:] = RHO[1:,1:] / (d[1:,1:] + 1e-16) # add 1e-16 to avoid division by zero
+
+    z = dx*dy*idct2(RHO)
+    z = z - z.min()
+    return z
+

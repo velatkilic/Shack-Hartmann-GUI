@@ -4,7 +4,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from surface_reconstruction import frankot_chellappa
+from surface_reconstruction import frankot_chellappa, poisson_solver_neumann
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -23,10 +23,13 @@ def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     return z, gx, gy, dx, dy
 
 def imshow_surfs(gnd, rec, save_name):
+    vmin = np.minimum(gnd.min(), rec.min())
+    vmax = np.maximum(gnd.max(), rec.max())
+
     fig, axs = plt.subplots(1,2,constrained_layout=True)
-    axs[0].imshow(gnd, cmap="gray", vmin=gnd.min(), vmax=gnd.max())
+    axs[0].imshow(gnd, cmap="gray", vmin=vmin, vmax=vmax)
     axs[0].set_title("Ground Truth")
-    im = axs[1].imshow(rec, cmap="gray", vmin=gnd.min(), vmax=gnd.max())
+    im = axs[1].imshow(rec, cmap="gray", vmin=vmin, vmax=vmax)
     axs[1].set_title("Reconstruction")
     fig.colorbar(im, ax=axs[1])
     plt.savefig(os.path.join("figures",save_name+"_2D.png"))
@@ -44,7 +47,7 @@ class TestSurfaceReconstruction(unittest.TestCase):
 
     def setUp(self):
         # setup a gradient
-        self.z, self.gx, self.gy, self.dx, self.dy = gen_surface_grad()
+        self.z, self.gx, self.gy, self.dx, self.dy = gen_surface_grad(Nx=1024, Ny=512)
 
         # Need to visually check surface reconstruction quality
         if not os.path.exists("figures"):
@@ -56,8 +59,13 @@ class TestSurfaceReconstruction(unittest.TestCase):
 
         # save plots
         imshow_surfs(self.z, s, "frankot_chellappa")
-        
+    
+    def test_poisson_solver_neumann(self):
+        # reconstruct surface
+        s = poisson_solver_neumann(self.gx, self.gy, self.dx, self.dy)
 
+        # save plots
+        imshow_surfs(self.z, s, "poisson_solver_neumann")
 
 
 if __name__ == "__main__":
