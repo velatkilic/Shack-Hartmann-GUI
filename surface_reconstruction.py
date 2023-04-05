@@ -16,8 +16,6 @@ def der_y(z, dy):
     dzdy = (z[1:,1:] - z[1:,0:-1]) / dy
     return dzdy
 
-
-
 def calc_laplacian(gx, gy, dx, dy):
     # zero pad
     gx = np.pad(gx, pad_width=1)
@@ -55,7 +53,7 @@ def frankot_chellappa(gx, gy, dx=1., dy=1.):
 
     z = np.fft.ifft2(Z)
     z = z.real
-    z = z - z.min() 
+    z = z - z.mean() 
 
     return z
 
@@ -82,7 +80,7 @@ def poisson_solver_neumann(gx, gy, dx=1., dy=1.):
     RHO[1:,1:] = RHO[1:,1:] / (d[1:,1:] + 1e-16) # add 1e-16 to avoid division by zero
 
     z = dx*dy*idct2(RHO)
-    z = z - z.min()
+    z = z - z.mean()
     return z
 
 # Harker, M., O’Leary, P., Regularized Reconstruction of a Surface from its Measured Gradient Field
@@ -93,7 +91,34 @@ def D_central(N, dx):
     D = D / (2.*dx)
     return D
 
+def harker_oleary_dirichlet(gx, gy, dx=1., dy=1., ZB=None):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    rows, cols = gx.shape
+
+    if ZB is None:
+        ZB = np.zeros((rows, cols))
+
+    P  = np.diag(np.ones(rows-1,),-1)[:,:-2]
+    Q  = np.diag(np.ones(cols-1,),-1)[:,:-2]
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    A = Dy @ P
+    B = Dx @ Q
+
+    F = ( gy - Dy @ ZB ) @ Q 
+    G = P.T @ ( gx - ZB @ Dx.T ) 
+
+    ZB[1:-1,1:-1] += linalg.solve_sylvester( A.T @ A, B.T @ B, A.T @ F + G @ B )
+    return ZB
+
+
 def harker_oleary(gx, gy, dx=1., dy=1.):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
     rows, cols = gx.shape
     u = np.ones((rows, 1))
     v = np.ones((cols, 1))
@@ -102,10 +127,6 @@ def harker_oleary(gx, gy, dx=1., dy=1.):
     Dx = D_central(cols, dy)
 
     return sylvester_solver(Dy, Dx, gy, gx, u, v)
-
-
-def mrdivide(A, B):
-    return np.linalg.lstsq(B.T, A.T, rcond=None)[0].T
 
 def sylvester_solver(A, B, F, G, u, v):
     '''
@@ -132,7 +153,7 @@ def sylvester_solver(A, B, F, G, u, v):
 
     # solve
     Phi = np.zeros((m, n))
-    Phi[0,1:] = mrdivide(G[0,:].reshape(1,-1), B[:,1:].T)
+    Phi[0,1:] = np.linalg.lstsq(B[:,1:], G[0,:].reshape(-1,1), rcond=None)[0].T
     Phi[1:,0] = np.linalg.lstsq(A[:,1:], F[:,0], rcond=None)[0]
     Phi[1:,1:] = linalg.solve_sylvester(A[:,1:].T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
 

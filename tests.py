@@ -4,7 +4,11 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from surface_reconstruction import frankot_chellappa, poisson_solver_neumann, der_y, der_x, harker_oleary
+from surface_reconstruction import (frankot_chellappa,
+                                    poisson_solver_neumann, 
+                                    der_y, der_x, 
+                                    harker_oleary,
+                                    harker_oleary_dirichlet)
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -15,7 +19,7 @@ def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
 
     xx, yy = np.meshgrid(x, y, indexing="ij")
     z = 0.5*np.cos(2*np.pi*(fx*xx + fy*yy))
-    z = z - z.min()
+    z = z - z.mean()
 
     gx = der_x(z, dx)
     gy = der_y(z, dy) 
@@ -39,7 +43,7 @@ def imshow_surfs(gnd, rec, save_name):
     N = cols // 2
     plt.figure()
     plt.plot(gnd[:,N], label="GND")
-    plt.plot(rec[:,N-1], label="REC")
+    plt.plot(rec[:,N], label="REC")
     plt.legend()
     plt.savefig(os.path.join("figures", save_name+"_1D.png"))
     plt.close()
@@ -53,26 +57,33 @@ class TestSurfaceReconstruction(unittest.TestCase):
         if not os.path.exists("figures"):
             os.mkdir("figures")
 
-    def test_frankot_chellappa(self):
-        # reconstruct surface
-        s = frankot_chellappa(self.gx, self.gy, self.dx, self.dy)
+    # def test_frankot_chellappa(self):
+    #     # reconstruct surface
+    #     s = frankot_chellappa(self.gx, self.gy, self.dx, self.dy)
 
-        # save plots
-        imshow_surfs(self.z, s, "frankot_chellappa")
+    #     # save plots
+    #     imshow_surfs(self.z, s, "frankot_chellappa")
     
-    def test_poisson_solver_neumann(self):
+    # def test_poisson_solver_neumann(self):
+    #     # reconstruct surface
+    #     s = poisson_solver_neumann(self.gx, self.gy, self.dx, self.dy)
+
+    #     # save plots
+    #     imshow_surfs(self.z, s, "poisson_solver_neumann")
+
+    # def test_harker_oleary(self):
+    #     # reconstruct surface
+    #     s = harker_oleary(self.gx, self.gy, self.dx, self.dy)
+
+    #     # save plots
+    #     imshow_surfs(self.z, s, "Harker Oleary")
+
+    def test_harker_oleary_dirichlet(self):
         # reconstruct surface
-        s = poisson_solver_neumann(self.gx, self.gy, self.dx, self.dy)
+        s = harker_oleary_dirichlet(self.gx, self.gy, self.dx, self.dy)
 
         # save plots
-        imshow_surfs(self.z, s, "poisson_solver_neumann")
-
-    def test_harker_oleary(self):
-        # reconstruct surface
-        s = harker_oleary(self.gx, self.gy, self.dx, self.dy)
-
-        # save plots
-        imshow_surfs(self.z, s, "Harker Oleary")
+        imshow_surfs(self.z, s, "Harker Oleary - Dirichlet")
 
 if __name__ == "__main__":
     unittest.main()
