@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.fftpack import dct, idct
+from scipy import linalg
 
 def dct2(x):
     return dct( dct( x, axis=0, norm='ortho' ), axis=1, norm='ortho' )
@@ -93,6 +94,17 @@ def sylvester_solver(A, B, F, G, u, v):
     u and v are the null vectors of A and B respectively
     '''
 
+    # Householder vectors
     m = len(u)
     n = len(v)
-   # TODO 
+    u[0] += np.linalg.norm(u,2)
+    u = np.sqrt(2) * u / np.linalg.norm(u, 2)
+
+    v[0] += np.linalg.norm(v, 2)
+    v = np.sqrt(2) * v / np.linalg.norm(v)
+
+    # Householder updates
+    Phi = np.zeros((m, n))
+    Phi[0,1:] = G[0,:] / B[:,1:].T
+    Phi[1:,0] = np.linalg.lstsq(A[:,1:], F[:,0])
+    Phi[1:,1:] = linalg.solve_continuous_lyapunov(A[:,1:).T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
