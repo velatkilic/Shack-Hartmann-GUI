@@ -8,7 +8,8 @@ from surface_reconstruction import (frankot_chellappa,
                                     poisson_solver_neumann, 
                                     der_y, der_x, 
                                     harker_oleary,
-                                    harker_oleary_dirichlet)
+                                    harker_oleary_dirichlet,
+                                    harker_oleary_spectral)
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -57,26 +58,26 @@ class TestSurfaceReconstruction(unittest.TestCase):
         if not os.path.exists("figures"):
             os.mkdir("figures")
 
-    # def test_frankot_chellappa(self):
-    #     # reconstruct surface
-    #     s = frankot_chellappa(self.gx, self.gy, self.dx, self.dy)
+    def test_frankot_chellappa(self):
+        # reconstruct surface
+        s = frankot_chellappa(self.gx, self.gy, self.dx, self.dy)
 
-    #     # save plots
-    #     imshow_surfs(self.z, s, "frankot_chellappa")
+        # save plots
+        imshow_surfs(self.z, s, "frankot_chellappa")
     
-    # def test_poisson_solver_neumann(self):
-    #     # reconstruct surface
-    #     s = poisson_solver_neumann(self.gx, self.gy, self.dx, self.dy)
+    def test_poisson_solver_neumann(self):
+        # reconstruct surface
+        s = poisson_solver_neumann(self.gx, self.gy, self.dx, self.dy)
 
-    #     # save plots
-    #     imshow_surfs(self.z, s, "poisson_solver_neumann")
+        # save plots
+        imshow_surfs(self.z, s, "poisson_solver_neumann")
 
-    # def test_harker_oleary(self):
-    #     # reconstruct surface
-    #     s = harker_oleary(self.gx, self.gy, self.dx, self.dy)
+    def test_harker_oleary(self):
+        # reconstruct surface
+        s = harker_oleary(self.gx, self.gy, self.dx, self.dy)
 
-    #     # save plots
-    #     imshow_surfs(self.z, s, "Harker Oleary")
+        # save plots
+        imshow_surfs(self.z, s, "Harker Oleary")
 
     def test_harker_oleary_dirichlet(self):
         # reconstruct surface
@@ -84,6 +85,13 @@ class TestSurfaceReconstruction(unittest.TestCase):
 
         # save plots
         imshow_surfs(self.z, s, "Harker Oleary - Dirichlet")
+
+    def test_harker_oleary_spectral(self):
+        # reconstruct surface
+        s = harker_oleary_spectral(self.gx, self.gy, self.dx, self.dy, mask=[150, 150])
+
+        # save plots
+        imshow_surfs(self.z, s, "Harker Oleary - Spectral")
 
 if __name__ == "__main__":
     unittest.main()

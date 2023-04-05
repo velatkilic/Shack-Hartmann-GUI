@@ -91,30 +91,6 @@ def D_central(N, dx):
     D = D / (2.*dx)
     return D
 
-def harker_oleary_dirichlet(gx, gy, dx=1., dy=1., ZB=None):
-    # check if shape is correct
-    if gx.shape != gy.shape:
-        raise ValueError("Gradient shapes must match")
-    rows, cols = gx.shape
-
-    if ZB is None:
-        ZB = np.zeros((rows, cols))
-
-    P  = np.diag(np.ones(rows-1,),-1)[:,:-2]
-    Q  = np.diag(np.ones(cols-1,),-1)[:,:-2]
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
-
-    A = Dy @ P
-    B = Dx @ Q
-
-    F = ( gy - Dy @ ZB ) @ Q 
-    G = P.T @ ( gx - ZB @ Dx.T ) 
-
-    ZB[1:-1,1:-1] += linalg.solve_sylvester( A.T @ A, B.T @ B, A.T @ F + G @ B )
-    return ZB
-
-
 def harker_oleary(gx, gy, dx=1., dy=1.):
     # check if shape is correct
     if gx.shape != gy.shape:
@@ -162,3 +138,64 @@ def sylvester_solver(A, B, F, G, u, v):
     Phi = Phi - (Phi @ v) @ v.T
 
     return Phi
+
+def harker_oleary_dirichlet(gx, gy, dx=1., dy=1., ZB=None):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    rows, cols = gx.shape
+
+    if ZB is None:
+        ZB = np.zeros((rows, cols))
+
+    P  = np.diag(np.ones(rows-1,),-1)[:,:-2]
+    Q  = np.diag(np.ones(cols-1,),-1)[:,:-2]
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    A = Dy @ P
+    B = Dx @ Q
+
+    F = ( gy - Dy @ ZB ) @ Q 
+    G = P.T @ ( gx - ZB @ Dx.T ) 
+
+    ZB[1:-1,1:-1] += linalg.solve_sylvester( A.T @ A, B.T @ B, A.T @ F + G @ B )
+    return ZB
+
+def harker_oleary_spectral(gx, gy, dx=1., dy=1., mask=None, Bx=None, By=None):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    rows, cols = gx.shape
+
+    if mask is None:
+        p = rows
+        q = cols
+    else:
+        p, q = mask
+
+    if Bx is None:
+        Bx = dct(np.eye(cols), norm="ortho")
+        Bx = Bx[:,0:q]
+    if By is None:
+        By = dct(np.eye(rows), norm="ortho")
+        By = By[:,0:p]
+
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    A = Dy @ By
+    B = Dx @ Bx
+
+    F = gy @ Bx
+    G = By.T @ gx
+
+    C = np.zeros((p,q))
+
+    C[0,1:q] = np.linalg.lstsq(B[:,1:q], G[0,:].reshape(-1,1), rcond=None)[0].T
+    C[1:p,0] = np.linalg.lstsq(A[:,1:p], F[:,0], rcond=None)[0]
+    C[1:p,1:q] = linalg.solve_sylvester( A[:,1:p].T @ A[:,1:p], B[:,1:q].T @ B[:,1:q], A[:,1:p].T @ F[:,1:] + G[1:,:] @ B[:,1:q] )
+
+    Z = By @ C @ Bx.T
+
+    return Z.real # real in case FFT was used for B
