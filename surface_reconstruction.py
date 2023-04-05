@@ -84,8 +84,17 @@ def poisson_solver_neumann(gx, gy, dx=None, dy=None):
     z = z - z.min()
     return z
 
-# everything from here on:
 # Harker, M., O’Leary, P., Regularized Reconstruction of a Surface from its Measured Gradient Field
+def harker_oleary(Dy, Dx, Zy, Zx, u=None, v=None):
+    rows, cols = Zx.shape
+    if u is None:
+        u = np.ones((rows, 1))
+    if v is None:
+        v = np.ones((cols, 1))
+    
+    return sylvester_solver(Dy, Dx, Zy, Zx, u, v)
+
+
 def sylvester_solver(A, B, F, G, u, v):
     '''
     Solution to:
@@ -107,4 +116,10 @@ def sylvester_solver(A, B, F, G, u, v):
     Phi = np.zeros((m, n))
     Phi[0,1:] = G[0,:] / B[:,1:].T
     Phi[1:,0] = np.linalg.lstsq(A[:,1:], F[:,0])
-    Phi[1:,1:] = linalg.solve_continuous_lyapunov(A[:,1:).T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
+    Phi[1:,1:] = linalg.solve_continuous_lyapunov(A[:,1:].T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
+
+    # Invert
+    Phi = Phi - u @ (u.T @ Phi)
+    Phi = Phi - (Phi @ v) @ v.T
+
+    return Phi
