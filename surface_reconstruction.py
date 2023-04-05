@@ -16,6 +16,8 @@ def der_y(z, dy):
     dzdy = (z[1:,1:] - z[1:,0:-1]) / dy
     return dzdy
 
+
+
 def calc_laplacian(gx, gy, dx, dy):
     # zero pad
     gx = np.pad(gx, pad_width=1)
@@ -28,7 +30,7 @@ def calc_laplacian(gx, gy, dx, dy):
 
     return rho[:-1,:-1]
 
-def frankot_chellappa(gx, gy, dx=None, dy=None):
+def frankot_chellappa(gx, gy, dx=1., dy=1.):
     # Frankot-Chellappa algorithm
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -58,15 +60,14 @@ def frankot_chellappa(gx, gy, dx=None, dy=None):
     return z
 
 
-def poisson_solver_neumann(gx, gy, dx=None, dy=None):
+def poisson_solver_neumann(gx, gy, dx=1., dy=1.):
     # see: Agrawal et al., "What is the range of surface reconstructions from a gradient field?" and
     # https://elonen.iki.fi/code/misc-notes/neumann-cosine/
     
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
-    if dx is None: dx = 1.
-    if dy is None: dy = 1.
+
     # fill nan with zeros
     gx, gy = map(np.nan_to_num, (gx, gy))
 
@@ -85,15 +86,26 @@ def poisson_solver_neumann(gx, gy, dx=None, dy=None):
     return z
 
 # Harker, M., O’Leary, P., Regularized Reconstruction of a Surface from its Measured Gradient Field
-def harker_oleary(Dy, Dx, Zy, Zx, u=None, v=None):
-    rows, cols = Zx.shape
-    if u is None:
-        u = np.ones((rows, 1))
-    if v is None:
-        v = np.ones((cols, 1))
-    
-    return sylvester_solver(Dy, Dx, Zy, Zx, u, v)
+def D_central(N, dx):
+    D = np.diag(-np.ones(N-1,),1)+np.diag(np.ones(N-1,),-1)
+    D[0,0:3] = [-3., 4., -1.]
+    D[-1,-3:] = [1., -4., 3]
+    D = D / (2.*dx)
+    return D
 
+def harker_oleary(gx, gy, dx=1., dy=1.):
+    rows, cols = gx.shape
+    u = np.ones((rows, 1))
+    v = np.ones((cols, 1))
+
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    return sylvester_solver(Dy, Dx, gy, gx, u, v)
+
+
+def mrdivide(A, B):
+    return np.linalg.lstsq(B.T, A.T, rcond=None)[0].T
 
 def sylvester_solver(A, B, F, G, u, v):
     '''
@@ -113,10 +125,16 @@ def sylvester_solver(A, B, F, G, u, v):
     v = np.sqrt(2) * v / np.linalg.norm(v)
 
     # Householder updates
+    A = A - ( A @ u ) @ u.T
+    B = B - ( B @ v ) @ v.T 
+    F = F - ( F @ v ) @ v.T 
+    G = G - u @ ( u.T @ G )
+
+    # solve
     Phi = np.zeros((m, n))
-    Phi[0,1:] = G[0,:] / B[:,1:].T
-    Phi[1:,0] = np.linalg.lstsq(A[:,1:], F[:,0])
-    Phi[1:,1:] = linalg.solve_continuous_lyapunov(A[:,1:].T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
+    Phi[0,1:] = mrdivide(G[0,:].reshape(1,-1), B[:,1:].T)
+    Phi[1:,0] = np.linalg.lstsq(A[:,1:], F[:,0], rcond=None)[0]
+    Phi[1:,1:] = linalg.solve_sylvester(A[:,1:].T @ A[:,1:], B[:,1:].T @ B[:,1:], A[:,1:].T @ F[:,1:] + G[1:,:] @ B[:,1:])
 
     # Invert
     Phi = Phi - u @ (u.T @ Phi)

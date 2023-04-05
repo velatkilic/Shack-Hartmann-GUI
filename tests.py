@@ -4,7 +4,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from surface_reconstruction import frankot_chellappa, poisson_solver_neumann, der_y, der_x
+from surface_reconstruction import frankot_chellappa, poisson_solver_neumann, der_y, der_x, harker_oleary
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -67,6 +67,12 @@ class TestSurfaceReconstruction(unittest.TestCase):
         # save plots
         imshow_surfs(self.z, s, "poisson_solver_neumann")
 
+    def test_harker_oleary(self):
+        # reconstruct surface
+        s = harker_oleary(self.gx, self.gy, self.dx, self.dy)
+
+        # save plots
+        imshow_surfs(self.z, s, "Harker Oleary")
 
 if __name__ == "__main__":
     unittest.main()
