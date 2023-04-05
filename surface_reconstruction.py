@@ -83,3 +83,16 @@ def poisson_solver_neumann(gx, gy, dx=None, dy=None):
     z = z - z.min()
     return z
 
+# everything from here on:
+# Harker, M., O’Leary, P., Regularized Reconstruction of a Surface from its Measured Gradient Field
+def sylvester_solver(A, B, F, G, u, v):
+    '''
+    Solution to:
+    A'A Phi + Phi B'B - A'F - GB = 0
+
+    u and v are the null vectors of A and B respectively
+    '''
+
+    m = len(u)
+    n = len(v)
+   # TODO 
