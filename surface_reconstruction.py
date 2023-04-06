@@ -199,3 +199,45 @@ def harker_oleary_spectral(gx, gy, dx=1., dy=1., mask=None, Bx=None, By=None):
     Z = By @ C @ Bx.T
 
     return Z.real # real in case FFT was used for B
+
+def harker_oleary_tikhonov(gx, gy, lam, dx=1., dy=1., deg=0, Z0=None):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    rows, cols = gx.shape
+
+    if isinstance(lam, tuple | list) and len(lam) == 2:
+        mu=lam[1]
+        lam = lam[0]
+    else:
+        mu = lam
+
+    if Z0 is None:
+        Z0 = harker_oleary(gx, gy, dx, dy)
+
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    if deg==0:
+        A = np.vstack((Dy, mu*np.eye(rows)))
+        B = np.vstack((Dx, lam*np.eye(cols)))
+        F = np.vstack((gy, mu*Z0))
+        G = np.hstack((gx, lam*Z0))
+    
+        Z = linalg.solve_sylvester(A.T @ A, B.T @ B, A.T @ F + G @ B)
+    
+    else:
+        Dyk = Dy**deg
+        Dxk = Dx**deg
+
+        A = np.vstack((Dy, Dyk))
+        B = np.vstack((Dx, Dxk))
+        F = np.vstack((gy, mu* Dyk @ Z0))
+        G = np.hstack((gx, lam*Z0 @ Dxk.T))
+        u = np.ones((rows, 1))
+        v = np.ones((cols, 1))
+
+        Z = sylvester_solver(A, B, F, G, u, v)
+    
+    return Z
+
