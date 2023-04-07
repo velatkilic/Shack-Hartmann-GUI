@@ -241,3 +241,31 @@ def harker_oleary_tikhonov(gx, gy, lam, dx=1., dy=1., deg=0, Z0=None):
     
     return Z
 
+def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx=1.0, dy=1.):
+    # check if shape is correct
+    if gx.shape != gy.shape:
+        raise ValueError("Gradient shapes must match")
+    rows, cols = gx.shape
+
+    Dy = D_central(rows, dx)
+    Dx = D_central(cols, dy)
+
+    Wxx = linalg.sqrtm( Lxx )
+    Wxy = linalg.sqrtm( Lxy )
+    Wyx = linalg.sqrtm( Lyx )
+    Wyy = linalg.sqrtm( Lyy )
+    u = np.linalg.lstsq(Wxy, np.ones((rows, 1)), rcond=None)[0]
+    v = np.linalg.lstsq(Wyx, np.ones((cols, 1)), rcond=None)[0]
+    
+    A = np.linalg.lstsq(Wyy, Dy @ Wxy, rcond=None)[0]
+    B = np.linalg.lstsq(Wxx, Dx @ Wyx, rcond=None)[0]
+
+    t = np.linalg.lstsq(Wyx.T, gy.T, rcond=None)[0].T
+    F = np.linalg.lstsq(Wyy, t, rcond=None)[0]
+
+    t = np.linalg.lstsq(Wxx.T, gx.T, rcond=None)[0].T
+    G = np.linalg.lstsq(Wxy, t, rcond=None)[0]
+
+    Z = sylvester_solver(A, B, F, G, u, v)
+    Z = Wxy @ Z @ Wyx 
+    return Z

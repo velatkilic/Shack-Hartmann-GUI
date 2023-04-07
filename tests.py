@@ -10,7 +10,8 @@ from surface_reconstruction import (frankot_chellappa,
                                     harker_oleary,
                                     harker_oleary_dirichlet,
                                     harker_oleary_spectral,
-                                    harker_oleary_tikhonov)
+                                    harker_oleary_tikhonov,
+                                    harker_oleary_weighted)
 
 def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
@@ -109,6 +110,15 @@ class TestSurfaceReconstruction(unittest.TestCase):
         s = harker_oleary_tikhonov(self.gx, self.gy, 1., self.dx, self.dy, deg=2)
         # save plots
         imshow_surfs(self.z, s, "Harker Oleary - Tikhonov Deg 2")
+
+    def test_harker_oleary_weighted(self):
+        rows, cols = self.gx.shape
+        Lxx = Lyx = np.eye(cols)
+        Lyy = Lxy = np.eye(rows)
+        s = harker_oleary_weighted(self.gx, self.gy, Lxx, Lxy, Lyx, Lyy, dx=self.dx, dy=self.dy)
+        
+        # save plots
+        imshow_surfs(self.z, s, "Harker Oleary - Weighted")
 
 if __name__ == "__main__":
     unittest.main()
