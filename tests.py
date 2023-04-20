@@ -1,19 +1,18 @@
 import unittest
+import os
 
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 
 from surface_reconstruction import (frankot_chellappa,
-                                    poisson_solver_neumann, 
-                                    der_y, der_x, 
+                                    poisson_solver_neumann,
                                     harker_oleary,
                                     harker_oleary_dirichlet,
                                     harker_oleary_spectral,
                                     harker_oleary_tikhonov,
                                     harker_oleary_weighted)
 
-def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
+def gen_cos_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     x = np.linspace(-xb,xb,Nx)
     dx = abs(x[1] - x[0])
 
@@ -24,8 +23,8 @@ def gen_surface_grad(Nx=512, xb=10, Ny=256, yb=10, fx=1., fy=2.):
     z = 0.5*np.cos(2*np.pi*(fx*xx + fy*yy))
     z = z - z.mean()
 
-    gx = der_x(z, dx)
-    gy = der_y(z, dy) 
+    gx = -0.5*2*np.pi*fx*np.sin(2*np.pi*(fx*xx + fy*yy))
+    gy = -0.5*2*np.pi*fy*np.sin(2*np.pi*(fx*xx + fy*yy))
 
     return z, gx, gy, dx, dy
 
@@ -54,7 +53,7 @@ class TestSurfaceReconstruction(unittest.TestCase):
 
     def setUp(self):
         # setup a gradient
-        self.z, self.gx, self.gy, self.dx, self.dy = gen_surface_grad(Nx=1024, Ny=512)
+        self.z, self.gx, self.gy, self.dx, self.dy = gen_cos_surface_grad(Nx=1024, Ny=512)
 
         # Need to visually check surface reconstruction quality
         if not os.path.exists("figures"):

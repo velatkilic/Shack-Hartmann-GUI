@@ -1,22 +1,68 @@
 import numpy as np
+import numpy.typing as npt
 from scipy.fftpack import dct, idct
 from scipy import linalg
 
-def dct2(x):
+def dct2(x: npt.NDArray) -> npt.NDArray:
+    """2D discrete cosine transform (DCT)
+
+    Args:
+        x (npt.NDArray): 2D signal (m,n)
+
+    Returns:
+        npt.NDArray: 2D DCT transform of the input
+    """
     return dct( dct( x, axis=0, norm='ortho' ), axis=1, norm='ortho' )
 
-def idct2(x):
+def idct2(x: npt.NDArray) -> None:
+    """2D inverse discrete cosine transform
+
+    Args:
+        x (npt.NDArray): 2D signal (m, n)
+
+    Returns:
+        npt.NDArray: 2D inverse DCT transform of the input
+    """
     return idct( idct( x, axis=0 , norm='ortho'), axis=1 , norm='ortho')
 
-def der_x(z, dx):
+def der_x(z: npt.NDArray, dx: float) -> None:
+    """Discrete first order derivate in x direction (row difference)
+
+    Args:
+        z (npt.NDArray): 2D signal (m, n)
+        dx (float): Sampling distance along the x direction (row direction)
+
+    Returns:
+        npt.NDArray: dz/dx partial derivative along x
+    """
     dzdx = (z[1:,1:] - z[0:-1,1:]) / dx
     return dzdx
 
-def der_y(z, dy):
+def der_y(z: npt.NDArray, dy: float) -> None:
+    """Discrete first order derivate in x direction (column difference)
+
+    Args:
+        z (npt.NDArray): 2D signal (m, n)
+        dy (float): Sampling distance along the y direction (column direction)
+
+    Returns:
+        npt.NDArray: dz/dy partial derivative along y
+    """
     dzdy = (z[1:,1:] - z[1:,0:-1]) / dy
     return dzdy
 
-def calc_laplacian(gx, gy, dx, dy):
+def calc_laplacian(gx: npt.NDArray, gy: npt.NDArray, dx: float, dy: float) -> None:
+    """Calculate Laplacian from gradient data
+
+    Args:
+        gx (npt.NDArray): surface gradient in x direction
+        gy (npt.NDArray): surface gradient in y direction
+        dx (float): sampling space in x
+        dy (float): sampling space in y
+
+    Returns:
+        npt.NDArray: Discrete Laplacian calcualted from the gradients
+    """
     # zero pad
     gx = np.pad(gx, pad_width=1)
     gy = np.pad(gy, pad_width=1)
@@ -28,7 +74,22 @@ def calc_laplacian(gx, gy, dx, dy):
 
     return rho[:-1,:-1]
 
-def frankot_chellappa(gx, gy, dx=1., dy=1.):
+def frankot_chellappa(gx: npt.NDArray, gy: npt.NDArray, dx: float = 1., dy: float = 1.) -> None:
+    """Surface reconstruction using the Frankot Chellappa algorithm:
+    
+    Frankot, Robert T., and Rama Chellappa. "A method for enforcing 
+    integrability in shape from shading algorithms." IEEE Transactions 
+    on pattern analysis and machine intelligence 10.4 (1988): 439-451.
+    
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # Frankot-Chellappa algorithm
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -58,9 +119,24 @@ def frankot_chellappa(gx, gy, dx=1., dy=1.):
     return z
 
 
-def poisson_solver_neumann(gx, gy, dx=1., dy=1.):
-    # see: Agrawal et al., "What is the range of surface reconstructions from a gradient field?" and
-    # https://elonen.iki.fi/code/misc-notes/neumann-cosine/
+def poisson_solver_neumann(gx: npt.NDArray, gy: npt.NDArray, dx: float = 1., dy: float = 1.) -> None:
+    """Surface reconstruction from gradient measurements using Poisson Solver
+
+    1. Agrawal, Amit, Ramesh Raskar, and Rama Chellappa. "What is the range of surface 
+    reconstructions from a gradient field?." Computer Vision ECCV 2006: 9th European 
+    Conference on Computer Vision, Graz, Austria, May 7-13, 2006.
+
+    2. https://elonen.iki.fi/code/misc-notes/neumann-cosine/
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     
     # check if shape is correct
     if gx.shape != gy.shape:
@@ -83,8 +159,21 @@ def poisson_solver_neumann(gx, gy, dx=1., dy=1.):
     z = z - z.mean()
     return z
 
-# Harker, M., O’Leary, P., Regularized Reconstruction of a Surface from its Measured Gradient Field
-def D_central(N, dx):
+def D_central(N: int, dx: float) -> npt.NDArray:
+    """Calculate first derivative matrix corresponding to central difference
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        N (int): Size of the output matrix
+        dx (float): Spatial sampling
+
+    Returns:
+        npt.NDArray: (N, N) Central difference operator
+    """
     D = np.diag(-np.ones(N-1,),1)+np.diag(np.ones(N-1,),-1)
     D[0,0:3] = [-3., 4., -1.]
     D[-1,-3:] = [1., -4., 3]
@@ -92,6 +181,22 @@ def D_central(N, dx):
     return D
 
 def harker_oleary(gx, gy, dx=1., dy=1.):
+    """Surface reconstruction using the Harker-Oleary algorithm
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -104,14 +209,29 @@ def harker_oleary(gx, gy, dx=1., dy=1.):
 
     return sylvester_solver(Dy, Dx, gy, gx, u, v)
 
-def sylvester_solver(A, B, F, G, u, v):
-    '''
-    Solution to:
+def sylvester_solver(A: npt.NDArray, B: npt.NDArray, F: npt.NDArray , G: npt.NDArray, u: npt.NDArray, v: npt.NDArray) -> None:
+    """Solution to:
+    
     A'A Phi + Phi B'B - A'F - GB = 0
 
     u and v are the null vectors of A and B respectively
-    '''
 
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        A (npt.NDArray): (m, m) matrix
+        B (npt.NDArray): (n, n) matrix
+        F (npt.NDArray): (m, n) matrix
+        G (npt.NDArray): (m, n) matrix
+        u (npt.NDArray): (m, 1) vector
+        v (npt.NDArray): (n, 1) vector
+
+    Returns:
+        npt.NDArray: Solution to the Sylvecter equation (Phi)
+    """
     # Householder vectors
     m = len(u)
     n = len(v)
@@ -139,7 +259,24 @@ def sylvester_solver(A, B, F, G, u, v):
 
     return Phi
 
-def harker_oleary_dirichlet(gx, gy, dx=1., dy=1., ZB=None):
+def harker_oleary_dirichlet(gx: npt.NDArray, gy: npt.NDArray, dx: float = 1., dy: float = 1., ZB: npt.NDArray = None) -> npt.NDArray:
+    """Surface reconstruction using the Harker-Oleary algorithm using Dirichlet boundary conditions
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+        ZB (npt.NDArray): Dirichlet boundary conditions (m, n)
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -162,7 +299,27 @@ def harker_oleary_dirichlet(gx, gy, dx=1., dy=1., ZB=None):
     ZB[1:-1,1:-1] += linalg.solve_sylvester( A.T @ A, B.T @ B, A.T @ F + G @ B )
     return ZB
 
-def harker_oleary_spectral(gx, gy, dx=1., dy=1., mask=None, Bx=None, By=None):
+def harker_oleary_spectral(gx: npt.NDArray, gy: npt.NDArray, dx: float = 1., dy: float = 1., mask: list = None, Bx: npt.NDArray = None, By: npt.NDArray = None) -> npt.NDArray:
+    """Surface reconstruction using the Harker-Oleary algorithm using basis functions
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+        mask (list, optional): List of filtering rows and columns. e.g. [50, 10] uses 
+        50 basis functions from By and 10 from Bx Defaults to None.
+        Bx (npt.NDArray, optional): Basis functions for the x direction. Defaults to DCT.
+        By (npt.NDArray, optional): Basis functions for the y direction. Defaults to DCT.
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -200,7 +357,26 @@ def harker_oleary_spectral(gx, gy, dx=1., dy=1., mask=None, Bx=None, By=None):
 
     return Z.real # real in case FFT was used for B
 
-def harker_oleary_tikhonov(gx, gy, lam, dx=1., dy=1., deg=0, Z0=None):
+def harker_oleary_tikhonov(gx: npt.NDArray, gy: npt.NDArray, lam: float, dx: float = 1., dy: float = 1., deg: int = 0, Z0: npt.NDArray = None) -> npt.NDArray:
+    """Surface reconstruction using the Harker-Oleary algorithm with Tikhonov regularization
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)
+        lam (float): Regularization parameter
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+        deg (int, optional): Degree. Defaults to 0.
+        Z0 (npt.NDArray, optional): Surface estimate. Defaults to unregularized solution (m, n).
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
@@ -212,7 +388,7 @@ def harker_oleary_tikhonov(gx, gy, lam, dx=1., dy=1., deg=0, Z0=None):
     else:
         mu = lam
 
-    if Z0 is None:
+    if Z0 is None: # shoudl this be zeros by default?
         Z0 = harker_oleary(gx, gy, dx, dy)
 
     Dy = D_central(rows, dx)
@@ -241,7 +417,27 @@ def harker_oleary_tikhonov(gx, gy, lam, dx=1., dy=1., deg=0, Z0=None):
     
     return Z
 
-def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx=1.0, dy=1.):
+def harker_oleary_weighted(gx: npt.NDArray, gy: npt.NDArray, Lxx: npt.NDArray, Lxy: npt.NDArray, Lyx: npt.NDArray, Lyy: npt.NDArray, dx: float = 1.0, dy: float = 1.) -> npt.NDArray:
+    """Surface reconstruction using the Harker-Oleary algorithm with weights
+
+    Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
+    surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
+    constrained, and weighted regularization." Journal of Mathematical Imaging 
+    and Vision 51 (2015): 46-70.
+
+    Args:
+        gx (npt.NDArray): Gradient in x direction (m, n)
+        gy (npt.NDArray): Gradient in y direction (m, n)        
+        Lxx (npt.NDArray): (n, n) Covariance matrix x component along x direction
+        Lxy (npt.NDArray): (m, m) Covariance matrix x component along y direction
+        Lyx (npt.NDArray): (n, n) Covariance matrix y component along x direction
+        Lyy (npt.NDArray): (m, m) Covariance matrix y component along y direction
+        dx (float, optional): Sampling space in x. Defaults to 1.
+        dy (float, optional): Sampling space in y. Defaults to 1.
+
+    Returns:
+        npt.NDArray: Reconstructed surface (m, n)
+    """
     # check if shape is correct
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
