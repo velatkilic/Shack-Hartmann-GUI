@@ -12,24 +12,24 @@ def idct2(x):
     """
     return idct( idct( x, axis=0 , norm='ortho'), axis=1 , norm='ortho')
 
-def der_x(z, dx):
-    """Discrete first order derivate in x direction (row difference)
-    """
-    dzdx = (z[1:,1:] - z[0:-1,1:]) / dx
-    return dzdx
-
 def der_y(z, dy):
+    """Discrete first order derivate in y direction (row difference)
+    """
+    dzdy = (z[1:,1:] - z[0:-1,1:]) / dy
+    return dzdy
+
+def der_x(z, dx):
     """Discrete first order derivate in x direction (column difference)
     """
-    dzdy = (z[1:,1:] - z[1:,0:-1]) / dy
-    return dzdy
+    dzdx = (z[1:,1:] - z[1:,0:-1]) / dx
+    return dzdx
 
 def calc_laplacian(gx, gy, dx, dy):
     """Calculate Laplacian from gradient data
 
     Args:
-        gx (npt.NDArray): surface gradient in x direction
-        gy (numpy array): surface gradient in y direction
+        gx (npt.NDArray): surface gradient in x direction, x direction along col
+        gy (numpy array): surface gradient in y direction, y direction along row
         dx (float): sampling space in x
         dy (float): sampling space in y
 
@@ -55,8 +55,8 @@ def frankot_chellappa(gx, gy, dx = 1., dy = 1.):
     on pattern analysis and machine intelligence 10.4 (1988): 439-451.
     
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n), x direction along col
+        gy (numpy array): Gradient in y direction (m, n), y direction along row
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
 
@@ -74,9 +74,9 @@ def frankot_chellappa(gx, gy, dx = 1., dy = 1.):
     # top left corner is (0,0)
     # rows correspond to the x coord
     # columns correspond to the y coord
-    wx = np.fft.fftfreq(rows, d=dx) * 2*np.pi
-    wy = np.fft.fftfreq(cols, d=dy) * 2*np.pi
-    wx, wy = np.meshgrid(wx, wy, indexing="ij") # ij indexing is needed so that x corresponds to rows
+    wx = np.fft.fftfreq(cols, d=dx) * 2*np.pi
+    wy = np.fft.fftfreq(rows, d=dy) * 2*np.pi
+    wx, wy = np.meshgrid(wx, wy)
     d = wx**2 + wy**2
 
     # 2D ffts
@@ -102,8 +102,8 @@ def poisson_solver_neumann(gx, gy, dx = 1., dy = 1.):
     2. https://elonen.iki.fi/code/misc-notes/neumann-cosine/
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n), x direction along col
+        gy (numpy array): Gradient in y direction (m, n), y direction along row
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
 
@@ -125,7 +125,7 @@ def poisson_solver_neumann(gx, gy, dx = 1., dy = 1.):
     RHO = dct2(rho)
 
     x, y = np.mgrid[0:rows, 0:cols]
-    d = 2.*(np.cos(np.pi*x/rows) + np.cos(np.pi*y/cols) - 2)
+    d = 2.*(np.cos(np.pi*x/cols) + np.cos(np.pi*y/rows) - 2)
     RHO[1:,1:] = RHO[1:,1:] / (d[1:,1:] + 1e-16) # add 1e-16 to avoid division by zero
 
     z = dx*dy*idct2(RHO)
@@ -149,7 +149,7 @@ def D_central(N, dx):
     Returns:
         numpy array: (N, N) Central difference operator
     """
-    D = np.diag(-np.ones(N-1,),1)+np.diag(np.ones(N-1,),-1)
+    D = np.diag(-np.ones(N-1,),-1)+np.diag(np.ones(N-1,),1)
     D[0,0:3] = [-3., 4., -1.]
     D[-1,-3:] = [1., -4., 3]
     D = D / (2.*dx)
@@ -164,8 +164,8 @@ def harker_oleary(gx, gy, dx=1., dy=1.):
     and Vision 51 (2015): 46-70.
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n), x direction along column
+        gy (numpy array): Gradient in y direction (m, n), y direction along row
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
 
@@ -176,20 +176,23 @@ def harker_oleary(gx, gy, dx=1., dy=1.):
     if gx.shape != gy.shape:
         raise ValueError("Gradient shapes must match")
     rows, cols = gx.shape
-    u = np.ones((rows, 1))
+    
     v = np.ones((cols, 1))
+    u = np.ones((rows, 1))
 
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
+    Dx = D_central(cols, dx)
+    Dy = D_central(rows, dy)
 
     return sylvester_solver(Dy, Dx, gy, gx, u, v)
 
-def sylvester_solver(A, B, F , G, u, v):
+def sylvester_solver(A, B, F, G, u, v):
     """Solution to:
     
     A'A Phi + Phi B'B - A'F - GB = 0
+    u and v are the null vectors of A and B respectively.
 
-    u and v are the null vectors of A and B respectively
+    Example:
+    Dy'Dy Z + Z Dx'Dx - Dy'Gy - GxDx = 0
 
     1. Harker, Matthew, and Paul Oleary. "Regularized reconstruction of a 
     surfacefrom its measured gradient field: algorithms for spectral, Tikhonov, 
@@ -199,8 +202,8 @@ def sylvester_solver(A, B, F , G, u, v):
     2. https://www.mathworks.com/matlabcentral/fileexchange/43149-surface-reconstruction-from-gradient-fields-grad2surf-version-1-0
 
     Args:
-        A (numpy array): (m, m) matrix
-        B (numpy array): (n, n) matrix
+        A (numpy array): (m, m) matrix where m is number of rows (related to y derivative)
+        B (numpy array): (n, n) matrix where n is number of cols (related to x derivative)
         F (numpy array): (m, n) matrix
         G (numpy array): (m, n) matrix
         u (numpy array): (m, 1) vector
@@ -247,8 +250,8 @@ def harker_oleary_dirichlet(gx, gy, dx = 1., dy = 1., ZB = None):
     2. https://www.mathworks.com/matlabcentral/fileexchange/43149-surface-reconstruction-from-gradient-fields-grad2surf-version-1-0
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n) x direction along col
+        gy (numpy array): Gradient in y direction (m, n) y direction along row
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
         ZB (numpy array): Dirichlet boundary conditions (m, n)
@@ -266,8 +269,8 @@ def harker_oleary_dirichlet(gx, gy, dx = 1., dy = 1., ZB = None):
 
     P  = np.diag(np.ones(rows-1,),-1)[:,:-2]
     Q  = np.diag(np.ones(cols-1,),-1)[:,:-2]
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
+    Dy = D_central(rows, dy)
+    Dx = D_central(cols, dx)
 
     A = Dy @ P
     B = Dx @ Q
@@ -289,8 +292,8 @@ def harker_oleary_spectral(gx, gy, dx = 1., dy = 1., mask = None, Bx = None, By 
     2. https://www.mathworks.com/matlabcentral/fileexchange/43149-surface-reconstruction-from-gradient-fields-grad2surf-version-1-0
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n) x direction along col
+        gy (numpy array): Gradient in y direction (m, n) y direction along row
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
         mask (list, optional): List of filtering rows and columns. e.g. [50, 10] uses 
@@ -319,8 +322,8 @@ def harker_oleary_spectral(gx, gy, dx = 1., dy = 1., mask = None, Bx = None, By 
         By = dct(np.eye(rows), norm="ortho")
         By = By[:,0:p]
 
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
+    Dy = D_central(rows, dy)
+    Dx = D_central(cols, dx)
 
     A = Dy @ By
     B = Dx @ Bx
@@ -349,8 +352,8 @@ def harker_oleary_tikhonov(gx, gy, lam, dx = 1., dy = 1., deg = 0, Z0 = None):
     2. https://www.mathworks.com/matlabcentral/fileexchange/43149-surface-reconstruction-from-gradient-fields-grad2surf-version-1-0
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)
+        gx (numpy array): Gradient in x direction (m, n) x direction along col
+        gy (numpy array): Gradient in y direction (m, n) y direction along row
         lam (float): Regularization parameter
         dx (float, optional): Sampling space in x. Defaults to 1.
         dy (float, optional): Sampling space in y. Defaults to 1.
@@ -374,8 +377,8 @@ def harker_oleary_tikhonov(gx, gy, lam, dx = 1., dy = 1., deg = 0, Z0 = None):
     if Z0 is None: # shoudl this be zeros by default?
         Z0 = harker_oleary(gx, gy, dx, dy)
 
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
+    Dy = D_central(rows, dy)
+    Dx = D_central(cols, dx)
 
     if deg==0:
         A = np.vstack((Dy, mu*np.eye(rows)))
@@ -411,8 +414,8 @@ def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx = 1.0, dy = 1.):
     2. https://www.mathworks.com/matlabcentral/fileexchange/43149-surface-reconstruction-from-gradient-fields-grad2surf-version-1-0
 
     Args:
-        gx (numpy array): Gradient in x direction (m, n)
-        gy (numpy array): Gradient in y direction (m, n)        
+        gx (numpy array): Gradient in x direction (m, n), x direction along col
+        gy (numpy array): Gradient in y direction (m, n), y direction along row
         Lxx (numpy array): (n, n) Covariance matrix x component along x direction
         Lxy (numpy array): (m, m) Covariance matrix x component along y direction
         Lyx (numpy array): (n, n) Covariance matrix y component along x direction
@@ -428,8 +431,8 @@ def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx = 1.0, dy = 1.):
         raise ValueError("Gradient shapes must match")
     rows, cols = gx.shape
 
-    Dy = D_central(rows, dx)
-    Dx = D_central(cols, dy)
+    Dy = D_central(rows, dy)
+    Dx = D_central(cols, dx)
 
     Wxx = linalg.sqrtm( Lxx )
     Wxy = linalg.sqrtm( Lxy )

@@ -1,7 +1,7 @@
 import numpy as np
-from sympy import symbols, lambdify, diff, sin, cos, exp
+from sympy import symbols, lambdify, diff, cos, exp
 
-class TestSurfaceGenerator:
+class SurfaceGenerator:
     """Generate test surfaces for the surface reconstruction algorithms.
     
     Example:
@@ -12,28 +12,33 @@ class TestSurfaceGenerator:
 
     """
     def __init__(self):
+        """
+        x is along the column direction
+        y is along the row direction
+        """
+
         # spatial domain
         xb, yb = 10, 10
-        Nx, Ny = 512, 256
+        Nx, Ny = 256, 512
         x = np.linspace(-xb,xb,Nx)
         y = np.linspace(-yb,yb,Ny)
 
         # spatial sampling
         self.dx = abs(x[1] - x[0])
         self.dy = abs(y[1] - y[0])
-        self.xx, self.yy = np.meshgrid(x, y, indexing="ij")
+        self.xx, self.yy = np.meshgrid(x, y)
 
         # generate some test surfaces
         self.xs, self.ys = symbols('xs ys')
         self.test_names = ["cos_wave_1_2",
-                           "sin_wave_2_2",
+                           "cos_wave_5_5",
                            "Gaussian_0_5",
                            "Gaussian_0_1",
                            "Gaussian_0_20",
                            "Multi_Gaus_5_5",
                            "Multi_Gaus_10_10"]
         surfaces = [cos(2*np.pi*(self.xs + 2*self.ys)),
-                    sin(2*np.pi*(2*self.xs + 2*self.ys)),
+                    cos(2*np.pi*(5*self.xs + 5*self.ys)),
                     exp(-0.5*(self.xs**2 + self.ys**2)/5.),
                     exp(-0.5*(self.xs**2 + self.ys**2)),
                     exp(-0.5*(self.xs**2 + self.ys**2)/20),

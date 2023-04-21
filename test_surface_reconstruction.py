@@ -13,7 +13,7 @@ from surface_reconstruction import (frankot_chellappa,
                                     harker_oleary_spectral,
                                     harker_oleary_tikhonov,
                                     harker_oleary_weighted)
-from surface_generator import TestSurfaceGenerator
+from surface_generator import SurfaceGenerator
 
 def imshow_surfs(gnd, rec, algo_name, save_name):
     save_dir = os.path.join(os.getcwd(), "figures", algo_name)
@@ -55,7 +55,7 @@ def imshow_surfs(gnd, rec, algo_name, save_name):
 class TestSurfaceReconstruction(unittest.TestCase):
     def setUp(self):
         # test surface generator class
-        self.surfaces = TestSurfaceGenerator()
+        self.surfaces = SurfaceGenerator()
         self.dx, self.dy = self.surfaces.get_dx_dy()
 
         # Need to visually check surface reconstruction quality
