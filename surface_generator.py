@@ -85,3 +85,26 @@ class SurfaceGenerator:
 
     def __len__(self):
         return len(self.test_surfaces)
+
+class CrackGradientGenerator:
+    def __init__(self, ) -> None:
+        xb, yb = -10, 10
+        Nx, Ny = 512, 512
+        x = np.linspace(-xb,xb,Nx)
+        y = np.linspace(-yb,yb,Ny)
+
+        # spatial sampling
+        self.dx = abs(x[1] - x[0])
+        self.dy = abs(y[1] - y[0])
+        self.xx, self.yy = np.meshgrid(x, y)
+
+    def calc_gradient(self, xc=0., yc=0., c=10.):
+        r   = np.sqrt((self.xx - xc)**2 + (self.yy - yc)**2)
+        phi = np.arctan2(self.yy - yc, self.xx - xc)
+        grady = c * r**(-1.5) * np.cos(1.5*phi)
+        gradx = c * r**(-1.5) * np.sin(1.5*phi)
+
+        ind = r < 1.
+        grady[ind] = 0.
+        gradx[ind] = 0.
+        return gradx, grady

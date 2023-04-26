@@ -13,7 +13,7 @@ from surface_reconstruction import (frankot_chellappa,
                                     harker_oleary_spectral,
                                     harker_oleary_tikhonov,
                                     harker_oleary_weighted)
-from surface_generator import SurfaceGenerator
+from surface_generator import SurfaceGenerator, CrackGradientGenerator
 
 def imshow_surfs(gnd, rec, algo_name, save_name):
     save_dir = os.path.join(os.getcwd(), "figures", algo_name)
@@ -27,9 +27,9 @@ def imshow_surfs(gnd, rec, algo_name, save_name):
     vmax = np.maximum(gnd.max(), rec.max())
 
     fig, axs = plt.subplots(1,2,constrained_layout=True)
-    axs[0].imshow(gnd, cmap="gray", vmin=vmin, vmax=vmax)
+    axs[0].imshow(gnd, cmap="jet", vmin=vmin, vmax=vmax)
     axs[0].set_title("Ground Truth")
-    im = axs[1].imshow(rec, cmap="gray", vmin=vmin, vmax=vmax)
+    im = axs[1].imshow(rec, cmap="jet", vmin=vmin, vmax=vmax)
     axs[1].set_title("Reconstruction")
     fig.colorbar(im, ax=axs[1])
     plt.savefig(os.path.join(save_dir,save_name+"_2D.png"))
@@ -56,12 +56,35 @@ class TestSurfaceReconstruction(unittest.TestCase):
     def setUp(self):
         # test surface generator class
         self.surfaces = SurfaceGenerator()
+        self.crack = CrackGradientGenerator()
         self.dx, self.dy = self.surfaces.get_dx_dy()
 
         # Need to visually check surface reconstruction quality
-        if not os.path.exists("figures"):
-            os.mkdir("figures")
+        self.fig_save_dir = os.path.join(os.getcwd(), "figures")
+        if not os.path.exists(self.fig_save_dir):
+            os.mkdir(self.fig_save_dir)
 
+    def test_harker_oleary_with_gradient(self):
+        # generate gradients
+        dx, dy = self.crack.dx, self.crack.dy
+        gradx, grady = self.crack.calc_gradient()
+        
+        # reconstruct surface
+        rec = harker_oleary(gradx, grady, dx, dy)
+        
+        # plot results
+        plt.figure()
+        plt.imshow(rec, cmap="jet")
+        plt.colorbar()
+        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec.png"))
+        plt.close()
+
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10,10))
+        surf = ax.plot_surface(self.crack.xx, self.crack.yy, rec)
+        ax.dist=10
+        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec_surf.png"))
+        plt.close()
+    
     def test_frankot_chellappa(self):
         for name, surf, gradx, grady in self.surfaces:
             # reconstruct surface
