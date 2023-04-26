@@ -99,12 +99,46 @@ class CrackGradientGenerator:
         self.xx, self.yy = np.meshgrid(x, y)
 
     def calc_gradient(self, xc=0., yc=0., c=10.):
-        r   = np.sqrt((self.xx - xc)**2 + (self.yy - yc)**2)
-        phi = np.arctan2(self.yy - yc, self.xx - xc)
-        grady = c * r**(-1.5) * np.cos(1.5*phi)
-        gradx = c * r**(-1.5) * np.sin(1.5*phi)
+        """Calculate gradients near a crack tip, from the following paper:
 
+        Miao, C. and Tippur, H.V., 2018. Higher sensitivity Digital Gradient
+        Sensing configurations for quantitative visualization of stress gradients
+        in transparent solids. Optics and Lasers in Engineering, 108, pp.54-67.
+
+        Coordinate system for the equations:
+            From Fig 2, x in the negative row direction (my x is along positive column)
+                        y in the negative column direction (my y is along positve row)
+        
+        Gradient equations from equation 16 (only N=1)
+
+        Args:
+            xc (float): Crack tip position. Defaults to 0..
+            yc (float): _description_. Defaults to 0..
+            c (float): Constant which corresponds to nu*B/E where
+                    nu -> Poisson's ratio
+                    B  -> Undeformed thickness
+                    E  -> Elastic modulus
+
+        Returns:
+            gradx : Gradient along x direction
+            grady : Gradient along y direction
+        """
+        # convert from my coordinate system to that of the paper
+        xx, yy = -self.yy, -self.xx
+        xc, yc = -yc, -xc
+
+        # calculate gradients
+        r   = np.sqrt((xx - xc)**2 + (yy - yc)**2)
+        phi = np.arctan2(yy - yc, xx - xc)
+        gradx = 0.5* c * r**(-1.5) * np.cos(-1.5*phi)
+        grady = 0.5* c * r**(-1.5) * np.sin(-1.5*phi)
+
+        # filter out small radii
         ind = r < 1.
         grady[ind] = 0.
         gradx[ind] = 0.
+
+        # convert gradients back to my coordinate system
+        gradx, grady = -grady, -gradx
+        
         return gradx, grady

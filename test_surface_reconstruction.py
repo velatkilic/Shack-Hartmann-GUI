@@ -81,7 +81,7 @@ class TestSurfaceReconstruction(unittest.TestCase):
 
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10,10))
         surf = ax.plot_surface(self.crack.xx, self.crack.yy, rec)
-        ax.dist=10
+        ax.dist = 10
         plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec_surf.png"))
         plt.close()
     

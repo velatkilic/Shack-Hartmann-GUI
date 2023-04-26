@@ -1,4 +1,3 @@
-from typing import Optional, Any, Union, Callable
 import numpy as np
 
 def centroid1D(arr, th_tot_weight=1e-1):

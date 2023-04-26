@@ -113,10 +113,10 @@ class TestUtils(unittest.TestCase):
         x = np.linspace(-10.,10.,N)
         y = np.linspace(-10.,10.,N)
         xx, yy = np.meshgrid(x, y)
-        s = 100.
+        s = 1.
         gaus = np.exp(-0.5*(xx**2 + yy**2)/s**2)
         row, col = N//2-1, N//2-1
-        cen = blobs_to_centroid(gaus, [(row, col, s)])
+        cen = blobs_to_centroid(gaus, [(row, col, s)], con=5)
         self.assertAlmostEqual(cen, [[row, col]])
 
     def test_bbox_to_centroid(self):
