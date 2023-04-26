@@ -13,7 +13,6 @@ def make_figure(grad_data, fig_name):
 
 class TestSurfaceGenerator(unittest.TestCase):
     def setUp(self):
-        super().__init__()
         self.surfaces = SurfaceGenerator()
         self.crack = CrackGradientGenerator()
 

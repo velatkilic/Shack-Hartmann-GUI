@@ -1,8 +1,14 @@
+from typing import Optional, Any, Union, Callable
 import numpy as np
 
 def centroid1D(arr, th_tot_weight=1e-1):
+    # check if 1D
     if len(arr.shape) > 1: return None
+    # check if positive
+    if np.any(arr < 0): return None
+    # calculate centroid
     inds = np.arange(0., len(arr), 1.)
+    arr = arr.astype(np.float32)
     tot_weight = sum(arr)
     if tot_weight < th_tot_weight:
         return 0
@@ -10,15 +16,18 @@ def centroid1D(arr, th_tot_weight=1e-1):
         return sum(arr*inds)/tot_weight
 
 def centroid2D(crop):
+    if len(crop.shape) != 2: return None, None
     col = centroid1D(crop.sum(0))
     row = centroid1D(crop.sum(1))
     return row, col
 
 def center_to_bbox(row, col, s, shape):
     row0 = max(row - s, 0)
-    row1 = min(row + s + 1, shape[0])
     col0 = max(col - s, 0)
-    col1 = min(col + s + 1, shape[1])
+    # These are used for 2D image array indexing
+    # therefore, last index non-inclusive, hence +1
+    row1 = min(row + s, shape[0]) + 1
+    col1 = min(col + s, shape[1]) + 1
     return row0,col0,row1,col1
 
 def blobs_to_centroid(img, blobs, con=3.):
