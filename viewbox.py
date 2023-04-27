@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QProgressDialog
 
-from utils import blobs_to_centroid, bbox_to_centroid
+from utils import blobs_to_centroid, roi_to_centroid
 
 class ViewBox(pg.ViewBox):
     def __init__(self, *args, **kargs):
@@ -212,7 +212,7 @@ class ViewBox(pg.ViewBox):
         for i in range(self.length):
             img = self.tiff_folder[i]
             for j, roi in enumerate(self.rois):
-                self.centroids[i,j,:] = bbox_to_centroid(img, roi)
+                self.centroids[i,j,:] = roi_to_centroid(img, roi)
             
             # update progress bar
             if pb.wasCanceled():

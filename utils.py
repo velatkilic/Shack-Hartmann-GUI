@@ -40,7 +40,7 @@ def blobs_to_centroid(img, blobs, con=3.):
         out.append([row0+drow, col0+dcol])
     return out
 
-def bbox_to_centroid(img, roi):
+def roi_to_centroid(img, roi):
     # aspect ratio is locked
     w = roi.size().x()
     row0 = int(roi.pos().y() - w)

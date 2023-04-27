@@ -106,8 +106,5 @@ class TestUtils(unittest.TestCase):
         self.assertAlmostEqual(prow, 7., delta=0.1)
         self.assertAlmostEqual(pcol, 7., delta=0.1)
 
-    def test_bbox_to_centroid(self):
-        pass
-
 if __name__ == "__main__":
     unittest.main()
