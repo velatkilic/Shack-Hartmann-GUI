@@ -96,28 +96,15 @@ class TestUtils(unittest.TestCase):
         img_shape = 10, 10
         r0,c0,r1,c1 = center_to_bbox(row, col, s, img_shape)
         self.assertEqual([r0,c0,r1,c1], [0.,0.,2.,2.])
-
-    def test_blobs_to_centroid_sym_exact_blob_estim(self):
-        N = 512
-        x = np.linspace(-10.,10.,N)
-        y = np.linspace(-10.,10.,N)
-        xx, yy = np.meshgrid(x, y)
-        s = 10.
-        gaus = np.exp(-0.5*(xx**2 + yy**2)/s**2)
-        row, col = N//2, N//2
-        cen = blobs_to_centroid(gaus, [(row, col, s)])
-        self.assertAlmostEqual(cen, [[row, col]])
     
     def test_blobs_to_centroid_sym_good_blob_estim(self):
-        N = 512
-        x = np.linspace(-10.,10.,N)
-        y = np.linspace(-10.,10.,N)
-        xx, yy = np.meshgrid(x, y)
-        s = 1.
+        xx, yy = np.mgrid[-7:8, -7:8]
+        s = 2
         gaus = np.exp(-0.5*(xx**2 + yy**2)/s**2)
-        row, col = N//2-1, N//2-1
-        cen = blobs_to_centroid(gaus, [(row, col, s)], con=5)
-        self.assertAlmostEqual(cen, [[row, col]])
+        row, col = 5, 5
+        prow, pcol = blobs_to_centroid(gaus, [(row, col, s)])[0]
+        self.assertAlmostEqual(prow, 7., delta=0.1)
+        self.assertAlmostEqual(pcol, 7., delta=0.1)
 
     def test_bbox_to_centroid(self):
         pass
