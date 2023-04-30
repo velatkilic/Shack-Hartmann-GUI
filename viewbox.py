@@ -6,11 +6,13 @@ from scipy.interpolate import griddata
 from dataset import TiffFolder
 
 import pyqtgraph as pg
+import pyqtgraph.opengl as gl
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QProgressDialog
 
 from utils import blobs_to_centroid, roi_to_centroid
+from surface_reconstruction import harker_oleary
 
 class ViewBox(pg.ViewBox):
     def __init__(self, *args, **kargs):
@@ -227,20 +229,42 @@ class ViewBox(pg.ViewBox):
         center = self.centroids[self.reference_idx, :, :]
         shifts = self.centroids - center
         
-        dx = abs(center[0,0] - center[1,0])
-        dy = abs(center[0,1] - center[1,1])
+        dy = abs(center[0,0] - center[1,0])
+        dx = abs(center[0,1] - center[1,1])
 
-        xmin = center[:,0].astype(np.intc).min()
-        xmax = center[:,0].astype(np.intc).max()
-        ymin = center[:,1].astype(np.intc).min()
-        ymax = center[:,1].astype(np.intc).max()
+        ymin = center[:,0].astype(np.intc).min()
+        ymax = center[:,0].astype(np.intc).max()
+        xmin = center[:,1].astype(np.intc).min()
+        xmax = center[:,1].astype(np.intc).max()
 
         xq, yq = np.mgrid[xmin:xmax, ymin:ymax]
 
         self.surface_reconstructions = np.zeros((len(self.centroids), xmax-xmin, ymax-ymin))
         for i in range(len(shifts)):
-            gx = griddata(center, self.centroids[i, :, 0], (xq,yq), method='linear')
-            gy = griddata(center, self.centroids[i, :, 1], (xq,yq), method='linear')
+            print(i, end='\r')
+            gy = griddata(center, shifts[i, :, 0], (xq,yq), method='linear')
+            gx = griddata(center, shifts[i, :, 1], (xq,yq), method='linear')
 
-            self.surface_reconstructions[i,:,:] = self.frankot_chellappa(gx, gy, dx, dy)
+            gy[np.isnan(gy)] = 0.
+            gx[np.isnan(gx)] = 0.
+
+            self.surface_reconstructions[i,:,:] = harker_oleary(gx, gy, dx, dy)
+
+        self.show_surface_rec()
+    
+    def show_surface_rec(self):
+        w = gl.GLViewWidget()
+        w.show()
+        w.setWindowTitle('Surface Plot')
+        # w.setCameraPosition(distance=50)
+
+        # Add a grid to the view
+        g = gl.GLGridItem()
+        # g.scale(2,2,1)
+        # g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
+        w.addItem(g)
+
+        ## Simple surface plot example
+        p1 = gl.GLSurfacePlotItem(z=self.surface_reconstructions[100,:,:], shader='shaded', color=(0.5, 0.5, 1, 1))
+        w.addItem(p1)
 
