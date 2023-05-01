@@ -1,5 +1,4 @@
 from pathlib import Path
-from skimage.feature import blob_log
 import numpy as np
 from scipy.interpolate import griddata
 
@@ -11,7 +10,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QProgressDialog
 
-from utils import blobs_to_centroid, roi_to_centroid
+from utils import blobs_to_centroid, roi_to_centroid, detect_centroids
 from surface_reconstruction import harker_oleary
 
 class ViewBox(pg.ViewBox):
@@ -101,11 +100,6 @@ class ViewBox(pg.ViewBox):
     def make_roi(self, start: QPoint, end: QPoint) -> pg.RectROI:
         # width and height
         w = end.x() - start.x()
-        #h = end.y() - start.y()
-
-        # make roi 
-        # roi = pg.RectROI(start, [w, h], pen=self.pen,
-        #             removable=True, rotatable=False) 
 
         # lock aspect ratio 
         roi = pg.RectROI(start, [w, w], pen=self.pen,
@@ -177,10 +171,7 @@ class ViewBox(pg.ViewBox):
 
         # detect blobs
         img = self.tiff_folder[self.idx] 
-        blobs = blob_log(img, **blob_log_params)
-
-        # refine blob predictions
-        centroids = blobs_to_centroid(img, blobs)
+        centroids = detect_centroids(img, blob_log_params)
 
         # progress bar
         pb = QProgressDialog("Calculating ROIs", "Cancel", 0, len(centroids))

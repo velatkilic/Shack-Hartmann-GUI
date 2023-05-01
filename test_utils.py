@@ -1,11 +1,15 @@
 import unittest
 import numpy as np
+import os
+import matplotlib.pyplot as plt
 
 from utils import *
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
-        pass
+        self.fig_save_dir = os.path.join(os.getcwd(), "figures")
+        if not(os.path.exists(self.fig_save_dir)):
+            os.mkdir(self.fig_save_dir)
 
     def test_centroid1D_wrong_array_shape(self):
         arr = np.zeros((10,10))
@@ -105,6 +109,34 @@ class TestUtils(unittest.TestCase):
         prow, pcol = blobs_to_centroid(gaus, [(row, col, s)])[0]
         self.assertAlmostEqual(prow, 7., delta=0.1)
         self.assertAlmostEqual(pcol, 7., delta=0.1)
+    
+    def test_detect_centroids(self):
+        blob_log_params = {
+            "threshold": 0.1,
+            "min_sigma": 1.,
+            "max_sigma": 5.,
+            "num_sigma": 10,
+            "overlap"  : 0.,
+            "exclude_border": 0
+        }
+        
+        # generate fake grid pattern
+        x = np.linspace(-7, 8, 16)
+        y = np.linspace(-7, 8, 16)
+        xx, yy = np.meshgrid(x, y)
+        z = np.exp(-0.5*(xx**2+yy**2))
+        z = np.vstack((z,)*16)
+        img = np.hstack((z,)*8)
+        # save grid pattern
+        fig, axs = plt.subplots(1,1)
+        axs.imshow(img, cmap="gray")
+        plt.savefig(os.path.join(self.fig_save_dir, "fake_grid_pattern.png"))
+        # centroids
+        centroids = detect_centroids(img, blob_log_params)
+        for row, col in centroids:
+            c = plt.Circle((col, row), 2, color='r', fill=False)
+            axs.add_patch(c)
+        plt.savefig(os.path.join(self.fig_save_dir, "fake_grid_pattern_centroids.png"))
 
 if __name__ == "__main__":
     unittest.main()

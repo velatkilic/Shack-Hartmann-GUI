@@ -1,4 +1,5 @@
 import numpy as np
+from skimage.feature import blob_log
 
 def centroid1D(arr, th_tot_weight=1e-1):
     # check if 1D
@@ -39,6 +40,11 @@ def blobs_to_centroid(img, blobs, con=3.):
         drow, dcol = centroid2D(crop)
         out.append([row0+drow, col0+dcol])
     return out
+
+def detect_centroids(img, blob_log_params):
+    blobs = blob_log(img, **blob_log_params) # detect blobs
+    centroids = blobs_to_centroid(img, blobs) # refine blobs
+    return centroids
 
 def roi_to_centroid(img, roi):
     # aspect ratio is locked
