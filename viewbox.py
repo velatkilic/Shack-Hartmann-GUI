@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 from scipy.interpolate import griddata
 
-from dataset import TiffFolder
+from dataset import Dataset
 
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
@@ -14,9 +14,10 @@ from utils import blobs_to_centroid, roi_to_centroid, detect_centroids
 from surface_reconstruction import harker_oleary
 
 class ViewBox(pg.ViewBox):
-    def __init__(self, *args, **kargs):
+    def __init__(self, parent, *args, **kargs):
         super().__init__(*args, **kargs)
         self.init_vars()
+        self.parent = parent
 
     def init_vars(self):
         self.clear()
@@ -43,8 +44,8 @@ class ViewBox(pg.ViewBox):
 
     def load_images(self, fname: Path) -> None:
         self.init_vars()
-        self.tiff_folder = TiffFolder(fname)
-        self.length = len(self.tiff_folder)
+        self.dset = Dataset(image_folder = fname)
+        self.length = len(self.dset)
 
     def convert_rois_to_numpy(self):
         rois = np.zeros((len(self.rois), 4))
@@ -71,20 +72,22 @@ class ViewBox(pg.ViewBox):
             pb.setValue(i)
         self.rois = pg_rois
 
-    def prev(self) -> None:
+    def navigate_to_idx(self, idx):
         self.clear_image()
-        self.idx = (self.idx - 1) % self.length # prev index
+        self.idx = idx
         self.set_image()
+        self.parent.update_hist()
 
-    def next(self) -> None:
-        self.clear_image()
-        self.idx = (self.idx + 1) % self.length # next index
-        self.set_image()
+    def prev(self):
+        return (self.idx - 1) % self.length # prev index
+
+    def next(self):
+        return (self.idx + 1) % self.length # next index
     
     def get_image(self) -> pg.ImageItem:
         # get current image if not already buffered
         if not(self.idx in self.imgs):
-            img = self.tiff_folder[self.idx] 
+            img = self.dset[self.idx] 
             img = pg.ImageItem(img)
             self.imgs[self.idx] = img
         return self.imgs[self.idx]
@@ -170,7 +173,7 @@ class ViewBox(pg.ViewBox):
             self.set_image()
 
         # detect blobs
-        img = self.tiff_folder[self.idx] 
+        img = self.dset[self.idx] 
         centroids = detect_centroids(img, blob_log_params)
 
         # progress bar
@@ -203,7 +206,7 @@ class ViewBox(pg.ViewBox):
 
         self.centroids = np.zeros((self.length, len(self.rois), 2)) 
         for i in range(self.length):
-            img = self.tiff_folder[i]
+            img = self.dset[i]
             for j, roi in enumerate(self.rois):
                 self.centroids[i,j,:] = roi_to_centroid(img, roi)
             

@@ -28,7 +28,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("Shack - Hartmann")
 
         # view_box holds images and ROIs
-        self.view_box = ViewBox(lockAspect=True, invertY=True)
+        self.view_box = ViewBox(self, lockAspect=True, invertY=True)
         self.hist = pg.HistogramLUTItem()
 
         self.img_view.addItem(self.view_box, row=0, col=0, rowspan=1, colspan=1)
@@ -39,33 +39,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.action_load_annot.triggered.connect(self.load_annot)
         self.action_save.triggered.connect(self.save_annot)
 
-        # blob detection
+        # buttons: blob detection, surface reconstruction
+        self.roi_dialog = ROI()
         self.button_calc_roi.clicked.connect(self.run_blob)
         self.button_calc_centroids.clicked.connect(self.calc_centroids)
         self.button_surf_rec.clicked.connect(self.surf_rec)
 
         # prev/next buttons
+        self.spin_frame_id.valueChanged.connect(self.navigate_to_idx)
         self.button_prev.clicked.connect(self.prev)
         self.button_next.clicked.connect(self.next)
 
         # remember last position
         self.last_folder = os.getcwd()
 
-        self.roi_dialog = ROI()
+    def navigate_to_idx(self, idx):
+        self.view_box.navigate_to_idx(idx)
 
     def prev(self):
-        # update image and annotation data
-        self.view_box.prev()
-
-        # update histogram
-        self.update_hist()
+        idx = self.view_box.prev()
+        self.spin_frame_id.setValue(idx)
 
     def next(self):
-        # update image and annotation data
-        self.view_box.next()
-
-        # update histogram
-        self.update_hist()
+        idx = self.view_box.next()
+        self.spin_frame_id.setValue(idx)
+    
+    def update_frame_id(self) -> None:
+        frame_count = len(self.view_box.dset)
+        self.label_frame_count.setText("/" + str(frame_count - 1))
+        self.spin_frame_id.setMaximum(frame_count-1)
     
     def update_hist(self):
         # keep old histogram levels
@@ -112,6 +114,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             # init histogram
             self.set_hist()
+            self.update_frame_id()
     
     def load_annot(self) -> None:
         fname = QFileDialog.getOpenFileName(self, "Open file", str(self.last_folder), "Matlab files (*.mat)")
@@ -151,9 +154,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.next()
 
     def run_blob(self):
-        self.roi_dialog.exec()
-        blob_log_params, box_size = self.roi_dialog.get_params()
-        self.view_box.run_blob(blob_log_params, box_size)
+        if self.roi_dialog.exec():
+            blob_log_params, box_size = self.roi_dialog.get_params()
+            self.view_box.run_blob(blob_log_params, box_size)
     
     def calc_centroids(self):
         # if no blobs were calculated, do that first

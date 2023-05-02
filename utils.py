@@ -56,4 +56,14 @@ def roi_to_centroid(img, roi):
 
     crop = img[row0:row1,col0:col1]
     drow, dcol = centroid2D(crop)
-    return [drow+row0, dcol+col0] 
+    return [drow+row0, dcol+col0]
+
+def normalize(img):
+    img = img.astype(np.float64)
+    mx = img.max()
+    mn = img.min()
+    df = mx - mn
+    img -= mn
+    if df != 0:
+        img /= df
+    return img
