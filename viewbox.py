@@ -216,30 +216,31 @@ class ViewBox(pg.ViewBox):
         if self.reference_idx is None:
             raise NotImplementedError("Reference index must be set with blob detection")
         
-        # calculate shifts with respect to the reference frame
-        center = self.centroids[self.reference_idx, :, :]
-        shifts = self.centroids - center
-        
-        dy = abs(center[0,0] - center[1,0])
-        dx = abs(center[0,1] - center[1,1])
+        if self.surface_reconstructions is None:
+            # calculate shifts with respect to the reference frame
+            center = self.centroids[self.reference_idx, :, :]
+            shifts = self.centroids - center
+            
+            dy = abs(center[0,0] - center[1,0])
+            dx = abs(center[0,1] - center[1,1])
 
-        ymin = center[:,0].astype(np.intc).min()
-        ymax = center[:,0].astype(np.intc).max()
-        xmin = center[:,1].astype(np.intc).min()
-        xmax = center[:,1].astype(np.intc).max()
+            ymin = center[:,0].astype(np.intc).min()
+            ymax = center[:,0].astype(np.intc).max()
+            xmin = center[:,1].astype(np.intc).min()
+            xmax = center[:,1].astype(np.intc).max()
 
-        xq, yq = np.mgrid[xmin:xmax, ymin:ymax]
+            xq, yq = np.mgrid[xmin:xmax, ymin:ymax]
 
-        self.surface_reconstructions = np.zeros((len(self.centroids), xmax-xmin, ymax-ymin))
-        for i in range(len(shifts)):
-            print(i, end='\r')
-            gy = griddata(center, shifts[i, :, 0], (xq,yq), method='linear')
-            gx = griddata(center, shifts[i, :, 1], (xq,yq), method='linear')
+            self.surface_reconstructions = np.zeros((len(self.centroids), xmax-xmin, ymax-ymin))
+            for i in range(len(shifts)):
+                print(i, end='\r')
+                gy = griddata(center, shifts[i, :, 0], (xq,yq), method='linear')
+                gx = griddata(center, shifts[i, :, 1], (xq,yq), method='linear')
 
-            gy[np.isnan(gy)] = 0.
-            gx[np.isnan(gx)] = 0.
+                gy[np.isnan(gy)] = 0.
+                gx[np.isnan(gx)] = 0.
 
-            self.surface_reconstructions[i,:,:] = harker_oleary(gx, gy, dx, dy)
+                self.surface_reconstructions[i,:,:] = harker_oleary(gx, gy, dx, dy)
 
         self.show_surface_rec()
     
@@ -252,10 +253,10 @@ class ViewBox(pg.ViewBox):
         # Add a grid to the view
         g = gl.GLGridItem()
         # g.scale(2,2,1)
-        # g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
+        g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
         w.addItem(g)
 
         ## Simple surface plot example
-        p1 = gl.GLSurfacePlotItem(z=self.surface_reconstructions[100,:,:], shader='shaded', color=(0.5, 0.5, 1, 1))
+        p1 = gl.GLSurfacePlotItem(z=self.surface_reconstructions[self.idx,:,:], shader='shaded', color=(0.5, 0.5, 1, 1))
         w.addItem(p1)
 

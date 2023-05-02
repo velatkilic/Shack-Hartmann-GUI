@@ -5,6 +5,7 @@ import scipy.io as sio
 
 from gui import Ui_MainWindow
 from viewbox import ViewBox
+from roi import ROI
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication,
@@ -49,6 +50,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # remember last position
         self.last_folder = os.getcwd()
+
+        self.roi_dialog = ROI()
 
     def prev(self):
         # update image and annotation data
@@ -121,18 +124,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.view_box.centroids = data["centroids"]
         
         params = data["params"]
-        self.set_params(params)
+        self.roi_dialog.set_params(params)
 
         self.view_box.set_rois(data["rois"])
-
-    def set_params(self, params):
-        self.spinBox_threshold.setValue(float(params["threshold"]))
-        self.spinBox_min_sigma.setValue(float(params["min_sigma"]))
-        self.spinBox_max_sigma.setValue(float(params["max_sigma"]))
-        self.spinBox_num_sigma.setValue(int(params["num_sigma"]))
-        self.spinBox_overlap.setValue(float(params["overlap"]))
-        self.spinBox_exclude_border.setValue(int(params["exclude_border"]))
-        self.spinBox_box_size.setValue(float(params["box_size"]))
 
     def save_annot(self) -> None:
         # ask user for filename
@@ -155,22 +149,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.prev()
         elif event.key() == Qt.Key_Right:
             self.next()
-    
-    def get_params(self):
-        blob_log_params = {
-            "threshold": self.spinBox_threshold.value(),
-            "min_sigma": self.spinBox_min_sigma.value(),
-            "max_sigma": self.spinBox_max_sigma.value(),
-            "num_sigma": self.spinBox_num_sigma.value(),
-            "overlap": self.spinBox_overlap.value(),
-            "exclude_border": self.spinBox_exclude_border.value()
-        }
-        box_size = self.spinBox_box_size.value()
-
-        return blob_log_params, box_size
 
     def run_blob(self):
-        blob_log_params, box_size = self.get_params()
+        self.roi_dialog.exec()
+        blob_log_params, box_size = self.roi_dialog.get_params()
         self.view_box.run_blob(blob_log_params, box_size)
     
     def calc_centroids(self):
