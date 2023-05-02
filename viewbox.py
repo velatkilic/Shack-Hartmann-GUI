@@ -1,6 +1,5 @@
 from pathlib import Path
 import numpy as np
-from scipy.interpolate import griddata
 
 from dataset import Dataset
 
@@ -10,8 +9,9 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QProgressDialog
 
-from utils import blobs_to_centroid, roi_to_centroid, detect_centroids
-from surface_reconstruction import harker_oleary
+from utils import roi_to_centroid, detect_centroids
+from surface_reconstruction import reconstruct_surface_from_sh
+from surface_plotting import SurfaceFigureDiag
 
 class ViewBox(pg.ViewBox):
     def __init__(self, parent, *args, **kargs):
@@ -209,43 +209,16 @@ class ViewBox(pg.ViewBox):
             # calculate shifts with respect to the reference frame
             center = self.centroids[self.reference_idx, :, :]
             shifts = self.centroids - center
-            
-            dy = abs(center[0,0] - center[1,0])
-            dx = abs(center[0,1] - center[1,1])
-
-            ymin = center[:,0].astype(np.intc).min()
-            ymax = center[:,0].astype(np.intc).max()
-            xmin = center[:,1].astype(np.intc).min()
-            xmax = center[:,1].astype(np.intc).max()
-
-            xq, yq = np.mgrid[xmin:xmax, ymin:ymax]
-
-            self.surface_reconstructions = np.zeros((len(self.centroids), xmax-xmin, ymax-ymin))
+            N = 512
+            self.surface_reconstructions = np.zeros((len(self.centroids), N, N))
             for i in range(len(shifts)):
-                print(i, end='\r')
-                gy = griddata(center, shifts[i, :, 0], (xq,yq), method='linear')
-                gx = griddata(center, shifts[i, :, 1], (xq,yq), method='linear')
+                surface, xq, yq = reconstruct_surface_from_sh(center, shifts[i,:,:], N)
+                self.surface_reconstructions[i,:,:] = surface
+                self.xq = xq
+                self.yq = yq
 
-                gy[np.isnan(gy)] = 0.
-                gx[np.isnan(gx)] = 0.
+        diag = SurfaceFigureDiag()
+        diag.fig.plot_surface(self.xq, self.yq, self.surface_reconstructions[self.idx, :, :])
+        diag.exec()
 
-                self.surface_reconstructions[i,:,:] = harker_oleary(gx, gy, dx, dy)
-
-        self.show_surface_rec()
-    
-    def show_surface_rec(self):
-        w = gl.GLViewWidget()
-        w.show()
-        w.setWindowTitle('Surface Plot')
-        # w.setCameraPosition(distance=50)
-
-        # Add a grid to the view
-        g = gl.GLGridItem()
-        # g.scale(2,2,1)
-        g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
-        w.addItem(g)
-
-        ## Simple surface plot example
-        p1 = gl.GLSurfacePlotItem(z=self.surface_reconstructions[self.idx,:,:], shader='shaded', color=(0.5, 0.5, 1, 1))
-        w.addItem(p1)
 

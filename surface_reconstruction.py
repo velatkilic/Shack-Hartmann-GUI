@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fftpack import dct, idct
 from scipy import linalg
+from scipy.interpolate import griddata
 
 def dct2(x):
     """2D discrete cosine transform (DCT)
@@ -453,3 +454,32 @@ def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx = 1.0, dy = 1.):
     Z = sylvester_solver(A, B, F, G, u, v)
     Z = Wxy @ Z @ Wyx 
     return Z
+
+def reconstruct_surface_from_sh(center, shifts, N=512, interp_method="linear"):
+    # boundary for surface calculation
+    ymin = center[:,0].astype(np.intc).min()
+    ymax = center[:,0].astype(np.intc).max()
+    xmin = center[:,1].astype(np.intc).min()
+    xmax = center[:,1].astype(np.intc).max()
+
+    # query points
+    x = np.linspace(xmin, xmax, N)
+    y = np.linspace(ymin, ymax, N)
+    xq, yq = np.meshgrid(x, y)
+    
+    # interpolate gradients on a grid
+    gy = griddata(center, shifts[:, 0], (xq,yq), method=interp_method)
+    gx = griddata(center, shifts[:, 1], (xq,yq), method=interp_method)
+
+    # record nan locations
+    gy_nan = np.isnan(gy)
+    gx_nan = np.isnan(gx)
+    gy[gy_nan] = 0.
+    gx[gx_nan] = 0.
+
+    # reconstruct surface
+    dx = abs(x[1] - x[0])
+    dy = abs(y[1] - y[0])
+    surface = harker_oleary(gx, gy, dx, dy)
+    # surface[gy_nan | gx_nan] = 0.
+    return surface, xq, yq
