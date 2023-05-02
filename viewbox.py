@@ -25,9 +25,7 @@ class ViewBox(pg.ViewBox):
         # image and annot index
         self.idx = 0
         self.length = 0
-
-        # image data
-        self.imgs = {}
+        self.img = None
 
         # bounding box data
         self.pen = pg.mkPen(width=1, color='r')
@@ -42,6 +40,18 @@ class ViewBox(pg.ViewBox):
         self.reference_idx = None
         self.surface_reconstructions = None
 
+    def navigate_to_idx(self, idx):
+        self.clear()
+        self.idx = idx
+        self.set_image()
+        self.parent.update_hist()
+
+    def prev(self):
+        return (self.idx - 1) % self.length # prev index
+
+    def next(self):
+        return (self.idx + 1) % self.length # next index
+    
     def load_images(self, fname: Path) -> None:
         self.init_vars()
         self.dset = Dataset(image_folder = fname)
@@ -72,33 +82,9 @@ class ViewBox(pg.ViewBox):
             pb.setValue(i)
         self.rois = pg_rois
 
-    def navigate_to_idx(self, idx):
-        self.clear_image()
-        self.idx = idx
-        self.set_image()
-        self.parent.update_hist()
-
-    def prev(self):
-        return (self.idx - 1) % self.length # prev index
-
-    def next(self):
-        return (self.idx + 1) % self.length # next index
-    
-    def get_image(self) -> pg.ImageItem:
-        # get current image if not already buffered
-        if not(self.idx in self.imgs):
-            img = self.dset[self.idx] 
-            img = pg.ImageItem(img)
-            self.imgs[self.idx] = img
-        return self.imgs[self.idx]
-
-    def clear_image(self):
-        img = self.get_image()
-        self.removeItem(img)
-
     def set_image(self) -> None:
-        img = self.get_image()
-        self.addItem(img)
+        self.img = pg.ImageItem(self.dset[self.idx])
+        self.addItem(self.img)
 
     def make_roi(self, start: QPoint, end: QPoint) -> pg.RectROI:
         # width and height

@@ -53,11 +53,7 @@ class Dataset:
             img = np.array(self.reader[idx])
         
         if self.normalize_img:
-            img = 255. * normalize(img)
-            img = img.astype(np.uint8)
-
-        if len(img.shape) < 3:
-            img = np.repeat(img[:,:, None], 3, axis=2)
+            img = normalize(img)
 
         # cache the result
         self.imgs[idx] = img

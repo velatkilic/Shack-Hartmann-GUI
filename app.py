@@ -80,12 +80,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.hist.setLevels(*hist_levels)
 
     def set_hist(self):
-        # tie new ImateItem
-        img = self.view_box.get_image()
-        self.hist.setImageItem(img)
-
-        # set auto range on
-        self.hist.autoHistogramRange()
+        img = self.view_box.img
+        if img is not None:
+            self.hist.setImageItem(img)
+            # set auto range on
+            self.hist.autoHistogramRange()
 
     def load(self) -> Path:
         # get directory for loading content from a folder

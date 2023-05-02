@@ -49,6 +49,8 @@ class Ui_MainWindow(object):
         self.button_surf_rec.setObjectName("button_surf_rec")
         self.verticalLayout_3.addWidget(self.button_surf_rec)
         self.verticalLayout.addLayout(self.verticalLayout_3)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout.addItem(spacerItem)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
