@@ -86,15 +86,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # set auto range on
             self.hist.autoHistogramRange()
 
-    def load(self) -> Path:
-        # get directory for loading content from a folder
-        fname = QFileDialog.getExistingDirectory(self, 'Select Folder', str(self.last_folder))
-        if len(fname) == 0:
-            return None
-        fname = Path(fname)
-        self.last_folder = fname
-        return fname
-
     def save(self) -> Path:
         # directory and filename for saving annotation data in json format
         fname = QFileDialog.getSaveFileName(self, "Save file", str(self.last_folder), "Matlab files (*.mat)")
@@ -104,16 +95,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return fname 
 
     def load_images(self) -> None:
-        # get file directory
-        fname = self.load()
+        # get directory 
+        fname = QFileDialog.getExistingDirectory(self, 'Select Folder', str(self.last_folder))
+        if fname is not None and len(fname) > 0:
+            fname = Path(fname)
+            self.last_folder = os.path.dirname(fname)
 
-        if fname is not None:
             # set image from view_box
             self.view_box.load_images(fname)
 
-            # init histogram
-            self.set_hist()
+            # Update frame id and show the first frame
             self.update_frame_id()
+            self.navigate_to_idx(0)
     
     def load_annot(self) -> None:
         fname = QFileDialog.getOpenFileName(self, "Open file", str(self.last_folder), "Matlab files (*.mat)")
