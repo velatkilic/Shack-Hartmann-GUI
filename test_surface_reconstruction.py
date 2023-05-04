@@ -12,8 +12,9 @@ from surface_reconstruction import (frankot_chellappa,
                                     harker_oleary_dirichlet,
                                     harker_oleary_spectral,
                                     harker_oleary_tikhonov,
-                                    harker_oleary_weighted)
-from surface_generator import SurfaceGenerator, CrackGradientGenerator
+                                    harker_oleary_weighted,
+                                    reconstruct_surface_from_sh)
+from surface_generator import SurfaceGenerator, calc_crack_grad_n1
 
 def imshow_surfs(gnd, rec, algo_name, save_name):
     save_dir = os.path.join(os.getcwd(), "figures", algo_name)
@@ -56,7 +57,6 @@ class TestSurfaceReconstruction(unittest.TestCase):
     def setUp(self):
         # test surface generator class
         self.surfaces = SurfaceGenerator()
-        self.crack = CrackGradientGenerator()
         self.dx, self.dy = self.surfaces.get_dx_dy()
 
         # Need to visually check surface reconstruction quality
@@ -64,25 +64,41 @@ class TestSurfaceReconstruction(unittest.TestCase):
         if not os.path.exists(self.fig_save_dir):
             os.mkdir(self.fig_save_dir)
 
-    def test_harker_oleary_with_gradient(self):
+    def test_harker_oleary_with_gradient_in_paper_coord(self):
         # generate gradients
-        dx, dy = self.crack.dx, self.crack.dy
-        gradx, grady = self.crack.calc_gradient()
-        
+        N = 512
+        ub = 30e-3
+        x = np.linspace(ub, -ub, N)
+        y = np.linspace(1.5*ub, -0.5*ub, N)
+        yy, xx = np.meshgrid(x, y)
+        dx = x[1] - x[0]
+        dy = y[1] - y[0]
+
+        gradx, grady, filt_final = calc_crack_grad_n1(xx, yy, # m
+                                                      k_1 = 0.9, # MPa * m^-1/2
+                                                      h_sample = 8.6e-3, # m
+                                                      poissons_ratio = 0.34,
+                                                      youngs_modulus = 3.3e3, # MPa
+                                                      )
+        # convert to my coordinate system
+        dx, dy = -dy, -dx
+        gradx, grady = -grady, -gradx
+
         # reconstruct surface
         rec = harker_oleary(gradx, grady, dx, dy)
-        
+        rec[filt_final] = 0.
+
         # plot results
         plt.figure()
         plt.imshow(rec, cmap="jet")
         plt.colorbar()
-        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec.png"))
+        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec_paper_coord.png"))
         plt.close()
 
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10,10))
-        surf = ax.plot_surface(self.crack.xx, self.crack.yy, rec)
-        ax.dist = 10
-        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec_surf.png"))
+        surf = ax.plot_surface(xx, yy, rec)
+        # ax.dist = 10
+        plt.savefig(os.path.join(self.fig_save_dir, "crack_grad_rec_surf_paper_coord.png"))
         plt.close()
     
     def test_frankot_chellappa(self):

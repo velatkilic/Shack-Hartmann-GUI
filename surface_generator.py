@@ -1,5 +1,6 @@
 import numpy as np
 from sympy import symbols, lambdify, diff, cos, exp
+from scipy.signal import convolve2d
 
 class SurfaceGenerator:
     """Generate test surfaces for the surface reconstruction algorithms.
@@ -86,59 +87,82 @@ class SurfaceGenerator:
     def __len__(self):
         return len(self.test_surfaces)
 
-class CrackGradientGenerator:
-    def __init__(self, ) -> None:
-        xb, yb = -10, 10
-        Nx, Ny = 512, 512
-        x = np.linspace(-xb,xb,Nx)
-        y = np.linspace(-yb,yb,Ny)
-
-        # spatial sampling
-        self.dx = abs(x[1] - x[0])
-        self.dy = abs(y[1] - y[0])
-        self.xx, self.yy = np.meshgrid(x, y)
-
-    def calc_gradient(self, xc=0., yc=0., c=10.):
-        """Calculate gradients near a crack tip, from the following paper:
+def calc_crack_grad_n1(xx, yy, k_1, h_sample, poissons_ratio, youngs_modulus, filter_output=True):
+    """Calculate gradients near a crack tip, from the following paper:
 
         Miao, C. and Tippur, H.V., 2018. Higher sensitivity Digital Gradient
         Sensing configurations for quantitative visualization of stress gradients
         in transparent solids. Optics and Lasers in Engineering, 108, pp.54-67.
 
         Coordinate system for the equations:
-            From Fig 2, x in the negative row direction (my x is along positive column)
-                        y in the negative column direction (my y is along positve row)
+            From Fig 2, x in the negative row direction
+                        y in the negative column direction
         
-        Gradient equations from equation 16 (only N=1)
+        Gradient equations from equation 16 (only N=1), divide by 2 to get gradient
 
-        Args:
-            xc (float): Crack tip position. Defaults to 0..
-            yc (float): _description_. Defaults to 0..
-            c (float): Constant which corresponds to nu*B/E where
-                    nu -> Poisson's ratio
-                    B  -> Undeformed thickness
-                    E  -> Elastic modulus
+    Args:
+        xx (numpy array): (m, n) position array, likely calculated from meshgrid. x direction along the crack tip
+        yy (numpy array): (m, n) position array, likely calculated from meshgrid. y direction normal to the crack tip
+        k_1 (float): Mode I stress intensity factor
+        h_sample (float): Sample thickness
+        poissons_ratio (float): Poisson's ratio
+        youngs_modulus (float): Young's modulus
 
-        Returns:
-            gradx : Gradient along x direction
-            grady : Gradient along y direction
-        """
-        # convert from my coordinate system to that of the paper
-        xx, yy = -self.yy, -self.xx
-        xc, yc = -yc, -xc
+    Returns:
+        gradx (numpy array) : gradient along x direction
+        grady (numpy array) : gradient along y direction
+        filt_final (numpy array): boolean filter. True corresponds to excluded regions
+    """
+    # polar coordinates
+    r     = np.sqrt(xx**2 + yy**2)
+    theta = np.arctan2(yy, xx)
 
-        # calculate gradients
-        r   = np.sqrt((xx - xc)**2 + (yy - yc)**2)
-        phi = np.arctan2(yy - yc, xx - xc)
-        gradx = 0.5* c * r**(-1.5) * np.cos(-1.5*phi)
-        grady = 0.5* c * r**(-1.5) * np.sin(-1.5*phi)
+    # gradient from first order expansion
+    a_1 = k_1 * np.sqrt(2./np.pi)
+    c_1 = 0.25 * a_1* h_sample * poissons_ratio / youngs_modulus
+    gradx = c_1 * r**(-1.5) * np.cos(-1.5*theta)
+    grady = c_1 * r**(-1.5) * np.sin(-1.5*theta)
 
-        # filter out small radii
-        ind = r < 1.
-        grady[ind] = 0.
-        gradx[ind] = 0.
+    # mismatch between equation and experiment results! TODO: check with paper authors
+    grady = -grady
 
-        # convert gradients back to my coordinate system
-        gradx, grady = -grady, -gradx
-        
-        return gradx, grady
+    # filter 0.5 <= r/thickness <= 1.5 and -135 deg <= theta <= 135deg
+    # discussed right after equation 16
+    if filter_output:
+        radius_ratio = r / h_sample
+        filt_radius = (radius_ratio >= 0.5) & (radius_ratio <= 1.5)
+        angle_rads = np.pi*135./180.
+        filt_angle = (theta >= -angle_rads) & (theta <= angle_rads)
+        filt_final = np.bitwise_not(filt_radius & filt_angle)
+    else:
+        filt_final = np.zeros(gradx.shape, dtype=np.bool_)
+
+    return gradx, grady, filt_final
+
+class ShackHartmannMeasGenerator:
+    def __init__(self, surf_gen, micro_lens_count=64):
+        self.surf_gen = surf_gen
+
+        # Shack Hartmann will essentially average
+        self.kernel_size_x =  self.surf_gen.Nx // micro_lens_count
+        self.kernel_size_y =  self.surf_gen.Ny // micro_lens_count
+        self.kernel = np.ones((self.kernel_size_y, self.kernel_size_x))
+
+        # center
+        xpos = np.arange(0, self.surf_gen.Nx, self.kernel_size_x)
+        ypos = np.arange(0, self.surf_gen.Ny, self.kernel_size_y)
+        self.center = np.meshgrid(xpos, ypos)
+    
+    def generate_measurement(self):
+        # gradient field
+        gradx, grady = self.surf_gen.calc_gradient()
+
+        # Shack Hartmann will essentially average
+        gradx_downsampled = convolve2d(gradx, self.kernel, mode="same")
+        grady_downsampled = convolve2d(grady, self.kernel, mode="same")
+
+        # decimate
+        gradx_meas = gradx_downsampled[::self.kernel_size_y, ::self.kernel_size_x]
+        grady_meas = grady_downsampled[::self.kernel_size_y, ::self.kernel_size_x]
+        return gradx_meas, grady_meas
+    
