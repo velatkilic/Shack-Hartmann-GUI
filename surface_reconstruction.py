@@ -455,7 +455,7 @@ def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx = 1.0, dy = 1.):
     Z = Wxy @ Z @ Wyx 
     return Z
 
-def reconstruct_surface_from_sh(center, shifts, N=512, interp_method="linear"):
+def reconstruct_surface_from_sh(center, shifts, interp_method="linear"):
     # boundary for surface calculation
     ymin = center[:,0].astype(np.intc).min()
     ymax = center[:,0].astype(np.intc).max()

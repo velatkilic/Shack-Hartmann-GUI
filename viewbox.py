@@ -209,16 +209,15 @@ class ViewBox(pg.ViewBox):
             # calculate shifts with respect to the reference frame
             center = self.centroids[self.reference_idx, :, :]
             shifts = self.centroids - center
-            N = 512
-            self.surface_reconstructions = np.zeros((len(self.centroids), N, N))
+            self.surface_reconstructions = []
             for i in range(len(shifts)):
-                surface, xq, yq = reconstruct_surface_from_sh(center, shifts[i,:,:], N)
-                self.surface_reconstructions[i,:,:] = surface
-                self.xq = xq
-                self.yq = yq
+                surface, xq, yq, gx, gy = reconstruct_surface_from_sh(center, shifts[i,:,:])
+                self.surface_reconstructions.append(surface)
+            self.xq = xq
+            self.yq = yq
 
         diag = SurfaceFigureDiag()
-        diag.fig.plot_surface(self.xq, self.yq, self.surface_reconstructions[self.idx, :, :])
+        diag.fig.plot_surface(self.xq, self.yq, self.surface_reconstructions[self.idx])
         diag.exec()
 
 
