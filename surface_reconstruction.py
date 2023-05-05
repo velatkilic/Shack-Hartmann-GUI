@@ -463,13 +463,11 @@ def reconstruct_surface_from_sh(center, shifts, N=512, interp_method="linear"):
     xmax = center[:,1].astype(np.intc).max()
 
     # query points
-    x = np.linspace(xmin, xmax, N)
-    y = np.linspace(ymin, ymax, N)
-    xq, yq = np.meshgrid(x, y)
+    yq, xq = np.mgrid[ymin:ymax, xmin:xmax]
     
     # interpolate gradients on a grid
-    gy = griddata(center, shifts[:, 0], (xq,yq), method=interp_method)
-    gx = griddata(center, shifts[:, 1], (xq,yq), method=interp_method)
+    gy = griddata(center, shifts[:, 0], (yq,xq), method=interp_method)
+    gx = griddata(center, shifts[:, 1], (yq,xq), method=interp_method)
 
     # record nan locations
     gy_nan = np.isnan(gy)
@@ -478,8 +476,6 @@ def reconstruct_surface_from_sh(center, shifts, N=512, interp_method="linear"):
     gx[gx_nan] = 0.
 
     # reconstruct surface
-    dx = abs(x[1] - x[0])
-    dy = abs(y[1] - y[0])
-    surface = harker_oleary(gx, gy, dx, dy)
-    # surface[gy_nan | gx_nan] = 0.
-    return surface, xq, yq
+    surface = harker_oleary(gx, gy)
+    surface[gy_nan | gx_nan] = 0.
+    return surface, xq, yq, gx, gy
