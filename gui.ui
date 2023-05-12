@@ -62,6 +62,42 @@
          </widget>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Show</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <widget class="QRadioButton" name="radio_show_image">
+              <property name="text">
+               <string>Image</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_show_surface_2D">
+              <property name="text">
+               <string>Surface 2D</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radio_show_surface_3D">
+              <property name="text">
+               <string>Surface 3D</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="button_surf_rec">
           <property name="text">
            <string>Surface Reconstruction</string>
