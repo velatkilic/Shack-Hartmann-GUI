@@ -457,10 +457,10 @@ def harker_oleary_weighted(gx, gy, Lxx, Lxy, Lyx, Lyy, dx = 1.0, dy = 1.):
 
 def reconstruct_surface_from_sh(center, shifts, interp_method="linear"):
     # boundary for surface calculation
-    ymin = center[:,0].astype(np.intc).min()
-    ymax = center[:,0].astype(np.intc).max()
-    xmin = center[:,1].astype(np.intc).min()
-    xmax = center[:,1].astype(np.intc).max()
+    ymin = center[:,0].astype(np.intc).min() + 1
+    ymax = center[:,0].astype(np.intc).max() - 1
+    xmin = center[:,1].astype(np.intc).min() + 1
+    xmax = center[:,1].astype(np.intc).max() - 1
 
     # query points
     yq, xq = np.mgrid[ymin:ymax, xmin:xmax]
