@@ -130,14 +130,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return None
 
         # gather data
-        blob_log_params, box_size = self.get_params()
+        blob_log_params, box_size = self.roi_dialog.get_params()
         params = blob_log_params | {"box_size": box_size}
+        mdict = {"params":params}
+
         centroids = self.view_box.centroids
+        if centroids is not None:
+            mdict["centroids"] = centroids
+
         surfaces = self.view_box.surface_reconstructions
+        if surfaces is not None:
+            mdict["surfaces"] = surfaces
+        
         rois = self.view_box.convert_rois_to_numpy()
+        if rois is not None:
+            mdict["rois"] = rois
 
         # save data
-        sio.savemat(fname, {"centroids":centroids, "rois":rois, "params":params, "surfaces":surfaces})
+        sio.savemat(fname, mdict)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Left:
